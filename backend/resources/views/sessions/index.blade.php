@@ -7,7 +7,6 @@
             <h1 class="text-2xl font-bold tracking-tight">{{ __('Daily sessions') }}</h1>
             <p class="mt-1 max-w-xl text-sm text-white/80">{{ __('Open the business day before recording, close it at the end with totals and notes.') }}</p>
         </div>
-        <a href="{{ \App\Support\Photos::credit('cement')['url'] }}" target="_blank" rel="noopener" class="absolute right-4 bottom-2 text-[10px] text-white/50 hover:text-white/80">{{ \App\Support\Photos::credit('cement')['text'] }}</a>
     </div>
 
     <form method="POST" action="{{ route('sessions.open') }}" class="card card-body flex flex-wrap items-end gap-3 no-print">

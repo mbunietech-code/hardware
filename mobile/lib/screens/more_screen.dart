@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../data/local_store.dart';
 import '../state/app_state.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 import 'cart_screen.dart';
 import 'expense_screen.dart';
@@ -155,7 +156,14 @@ class MoreScreen extends StatelessWidget {
               if (ok == true) await s.logout();
             },
           ),
-        ],
+          Padding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+          child: Text(
+            '${tr('Photo credits')}: ${Photos.credits.values.join(' · ')}',
+            style: const TextStyle(color: Brand.muted, fontSize: 10.5),
+          ),
+        ),
+      ],
       ),
     );
   }

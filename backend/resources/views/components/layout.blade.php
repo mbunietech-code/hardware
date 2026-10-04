@@ -54,7 +54,7 @@
     <aside class="no-print fixed inset-y-0 left-0 z-40 flex w-[272px] transform flex-col bg-slate-900 text-white transition duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0"
            :class="menu ? 'translate-x-0' : '-translate-x-full'">
         <div class="flex h-[72px] shrink-0 items-center gap-3 px-6">
-            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-400 text-slate-900">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white ring-1 ring-white/15">
                 <x-icon name="store" class="h-5 w-5" />
             </div>
             <div class="min-w-0 leading-tight">
@@ -65,7 +65,7 @@
         </div>
 
         <div class="px-4 pb-2">
-            <a href="{{ route('sales.create') }}" class="btn btn-accent w-full justify-center py-3"><x-icon name="plus" class="h-4 w-4" /> {{ __('New sale') }}</a>
+            <a href="{{ route('sales.create') }}" class="btn btn-primary w-full justify-center py-3"><x-icon name="plus" class="h-4 w-4" /> {{ __('New sale') }}</a>
         </div>
 
         <nav class="flex-1 space-y-6 overflow-y-auto px-4 py-4">

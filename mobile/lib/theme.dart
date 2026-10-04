@@ -25,7 +25,7 @@ ThemeData buildTheme() {
   final scheme = ColorScheme.fromSeed(
     seedColor: Brand.teal600,
     primary: Brand.teal600,
-    secondary: Brand.amber,
+    secondary: Brand.teal500,
     surface: Colors.white,
   );
   final radius = BorderRadius.circular(14);

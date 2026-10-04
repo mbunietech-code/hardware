@@ -234,8 +234,8 @@ class _Hero extends StatelessWidget {
                   Container(
                     width: 38,
                     height: 38,
-                    decoration: BoxDecoration(color: Brand.amber, borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.storefront_rounded, color: Brand.teal950, size: 22),
+                    decoration: BoxDecoration(color: Colors.white.withValues(alpha: .15), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
+                    child: const Icon(Icons.storefront_rounded, color: Colors.white, size: 22),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -289,8 +289,8 @@ class _Hero extends StatelessWidget {
                       child: FilledButton.icon(
                         onPressed: onSell,
                         style: FilledButton.styleFrom(
-                          backgroundColor: Brand.amber,
-                          foregroundColor: Brand.teal950,
+                          backgroundColor: Colors.white,
+                          foregroundColor: Brand.ink,
                           padding: const EdgeInsets.symmetric(vertical: 17),
                           textStyle: const TextStyle(fontFamily: 'PlusJakartaSans', fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: .5),
                         ),

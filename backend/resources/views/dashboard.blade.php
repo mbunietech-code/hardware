@@ -11,7 +11,6 @@
     <div class="relative overflow-hidden rounded-3xl bg-slate-900 p-6 text-white shadow-lift sm:p-8">
         <img src="{{ asset('images/hero.jpg') }}" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.remove()">
         <div class="absolute inset-0 bg-slate-950/65"></div>
-        <a href="{{ \App\Support\Photos::credit('hero')['url'] }}" target="_blank" rel="noopener" class="absolute right-4 bottom-2 z-10 text-[10px] text-white/50 hover:text-white/80">{{ \App\Support\Photos::credit('hero')['text'] }}</a>
         <div class="relative flex flex-wrap items-center justify-between gap-6">
             <div>
                 <p class="text-sm font-medium text-white/75">{{ now()->translatedFormat('l, j F Y') }}</p>
@@ -74,10 +73,10 @@
                                 {{ \Illuminate\Support\Carbon::parse($day)->translatedFormat('D j M') }} · {{ Money::format($value) }}
                             </div>
                             <div class="flex w-full flex-1 items-end">
-                                <div class="w-full rounded-lg transition-all duration-300 {{ $isToday ? 'bg-accent-400' : 'bg-brand-500 opacity-80 group-hover:opacity-100' }}"
+                                <div class="w-full rounded-lg transition-all duration-300 {{ $isToday ? 'bg-brand-700' : 'bg-brand-400 opacity-70 group-hover:opacity-100' }}"
                                      style="height: {{ max(3, $value / $max * 100) }}%"></div>
                             </div>
-                            <div class="text-[10px] font-medium {{ $isToday ? 'text-accent-500' : 'text-slate-400' }}">{{ \Illuminate\Support\Carbon::parse($day)->format('d') }}</div>
+                            <div class="text-[10px] font-medium {{ $isToday ? 'font-bold text-brand-700' : 'text-slate-400' }}">{{ \Illuminate\Support\Carbon::parse($day)->format('d') }}</div>
                         </div>
                     @endforeach
                 </div>

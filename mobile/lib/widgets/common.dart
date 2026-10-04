@@ -313,7 +313,6 @@ class PhotoHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final credit = Photos.credits[image];
     return ClipRRect(
       borderRadius: BorderRadius.vertical(bottom: Radius.circular(radius)),
       child: Stack(
@@ -324,14 +323,6 @@ class PhotoHeader extends StatelessWidget {
           ),
           Positioned.fill(child: Container(color: Colors.black.withValues(alpha: shade))),
           SizedBox(width: double.infinity, child: child),
-          if (credit != null)
-            Positioned(
-              right: creditOnTop ? null : 14,
-              left: creditOnTop ? 16 : null,
-              bottom: creditOnTop ? null : 6,
-              top: creditOnTop ? MediaQuery.of(context).padding.top + 4 : null,
-              child: Text(credit, style: TextStyle(color: Colors.white.withValues(alpha: .45), fontSize: 9)),
-            ),
         ],
       ),
     );
@@ -356,8 +347,6 @@ class PhotoCard extends StatelessWidget {
           Positioned.fill(child: Image.asset(image, fit: BoxFit.cover, errorBuilder: (_, _, _) => const SizedBox.shrink())),
           Positioned.fill(child: Container(color: Colors.black.withValues(alpha: .55))),
           Positioned(left: 18, right: 18, bottom: 18, child: child),
-          if (Photos.credits[image] != null)
-            Positioned(right: 12, top: 8, child: Text(Photos.credits[image]!, style: TextStyle(color: Colors.white.withValues(alpha: .45), fontSize: 9))),
         ],
       ),
     ),

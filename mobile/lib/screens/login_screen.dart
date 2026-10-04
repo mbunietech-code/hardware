@@ -66,8 +66,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       Container(
                         width: 58,
                         height: 58,
-                        decoration: BoxDecoration(color: Brand.amber, borderRadius: BorderRadius.circular(18)),
-                        child: const Icon(Icons.storefront_rounded, size: 32, color: Brand.teal950),
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .15), borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white24)),
+                        child: const Icon(Icons.storefront_rounded, size: 32, color: Colors.white),
                       ),
                       const SizedBox(height: 18),
                       Text(tr('Hardware BMS'), style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w800)),

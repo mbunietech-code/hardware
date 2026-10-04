@@ -8,4 +8,7 @@
         <x-field name="password_confirmation" :label="__('Confirm new password')" type="password" required />
         <button class="btn btn-primary">{{ __('Change password') }}</button>
     </form>
+    <p class="text-xs text-slate-400">{{ __('Photo credits') }}:
+        @foreach (\App\Support\Photos::CREDITS as $c)<a href="{{ $c['url'] }}" target="_blank" rel="noopener" class="hover:text-slate-600">{{ $c['text'] }}</a>@if (! $loop->last) · @endif @endforeach
+    </p>
 </x-layout>

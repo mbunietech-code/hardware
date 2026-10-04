@@ -13,7 +13,7 @@
         <img src="{{ asset('images/shop.jpg') }}" alt="" class="absolute inset-0 h-full w-full object-cover" onerror="this.remove()">
         <div class="absolute inset-0 bg-slate-950/70"></div>
         <div class="relative flex items-center gap-3">
-            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-400 text-slate-900"><x-icon name="store" /></div>
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/25 backdrop-blur"><x-icon name="store" /></div>
             <div class="text-lg font-bold">{{ \App\Support\Settings::get('business_name') }}</div>
         </div>
         <div class="relative my-auto max-w-md">
@@ -30,7 +30,6 @@
         </div>
         <div class="relative flex items-end justify-between gap-4 text-xs text-white/60">
             <span>{{ __('Hardware Business Management System') }}</span>
-            <a href="{{ \App\Support\Photos::credit('shop')['url'] }}" target="_blank" rel="noopener" class="text-[10px] whitespace-nowrap text-white/45 hover:text-white/80">{{ \App\Support\Photos::credit('shop')['text'] }}</a>
         </div>
     </div>
 

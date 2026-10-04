@@ -11,6 +11,7 @@ const Map<String, String> swahili = {
   'All good': 'Kila kitu sawa',
   'All': 'Zote',
   'Welcome back': 'Karibu tena',
+  'Photo credits': 'Picha',
 
   // Navigation & general
   'Home': 'Nyumbani',
