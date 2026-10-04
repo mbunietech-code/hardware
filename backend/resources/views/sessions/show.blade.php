@@ -13,6 +13,54 @@
         <div class="stat"><div class="stat-label">{{ __('Expected cash in drawer') }}</div><div class="stat-value">{{ Money::format($t['expected_cash'] ?? 0) }}</div><div class="text-xs text-slate-500">{{ __('Opening cash') }} {{ Money::format($session->opening_cash) }}</div></div>
     </div>
 
+    @php
+        // Money in and out for the day, step by step (all payment methods; credit not yet received is excluded).
+        $opening = (float) $session->opening_cash;
+        $lines = [
+            ['+', 'Sales received', (float) ($t['sales_paid'] ?? 0)],
+            ['+', 'Debt payments received', (float) ($t['debt_payments_received'] ?? 0)],
+            ['+', 'Capital injected', (float) ($t['capital_in'] ?? 0)],
+            ['−', 'Purchases paid', (float) ($t['purchases_paid'] ?? 0)],
+            ['−', 'Expenses', (float) ($t['expenses_total'] ?? 0)],
+            ['−', 'Debt payments made', (float) ($t['debt_payments_made'] ?? 0)],
+            ['−', 'Capital withdrawn', (float) ($t['capital_out'] ?? 0)],
+        ];
+        $balance = $opening;
+        foreach ($lines as [$sign, $l, $v]) { $balance += $sign === '+' ? $v : -$v; }
+        $salesTotal = (float) ($t['sales_total'] ?? 0);
+        $pct = fn ($v) => $salesTotal > 0 ? round($v / $salesTotal * 100, 1).'%' : '—';
+    @endphp
+    <div class="card overflow-hidden">
+        <div class="card-header">
+            <div class="card-title"><x-icon name="cash" class="h-5 w-5 text-brand-600" />{{ __("Today's calculation") }}</div>
+            <span class="text-xs text-slate-500">{{ __('All payment methods') }}</span>
+        </div>
+        <div class="grid gap-0 lg:grid-cols-[1fr_320px]">
+            <dl class="divide-y divide-slate-100 px-5 py-2 text-sm sm:px-6">
+                <div class="flex justify-between py-2.5"><dt class="font-medium text-slate-700">{{ __('Opening cash') }}</dt><dd class="font-semibold tabular-nums">{{ Money::format($opening) }}</dd></div>
+                @foreach ($lines as [$sign, $label, $value])
+                    @if ($value > 0 || in_array($label, ['Sales received', 'Expenses']))
+                        <div class="flex justify-between py-2.5">
+                            <dt class="flex items-center gap-2 text-slate-600"><span class="flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold {{ $sign === '+' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' }}">{{ $sign }}</span>{{ __($label) }}</dt>
+                            <dd class="tabular-nums {{ $sign === '+' ? 'text-emerald-700' : 'text-rose-700' }}">{{ $sign }} {{ Money::format($value) }}</dd>
+                        </div>
+                    @endif
+                @endforeach
+                <div class="flex justify-between py-3 text-base"><dt class="font-bold text-slate-900">= {{ __('Money remaining') }}</dt><dd class="font-bold tabular-nums {{ $balance < 0 ? 'text-rose-700' : 'text-slate-900' }}">{{ Money::format($balance) }}</dd></div>
+            </dl>
+            <div class="space-y-3 border-t border-slate-100 bg-slate-50/60 p-5 text-sm lg:border-t-0 lg:border-l">
+                <div class="flex justify-between"><span class="text-slate-500">{{ __('Expenses as % of sales') }}</span><span class="font-semibold">{{ $pct((float) ($t['expenses_total'] ?? 0)) }}</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">{{ __('Gross profit') }} ({{ __('Sales') }} − {{ __('Cost of goods') }})</span><span class="font-semibold">{{ Money::format($salesTotal - (float) ($t['cost_of_goods'] ?? 0)) }}</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">{{ __('Gross margin') }}</span><span class="font-semibold">{{ $pct($salesTotal - (float) ($t['cost_of_goods'] ?? 0)) }}</span></div>
+                @if ((float) ($t['sales_credit'] ?? 0) > 0)
+                    <div class="flex justify-between"><span class="text-slate-500">{{ __('Sold on credit (not yet received)') }}</span><span class="font-semibold text-amber-700">{{ Money::format($t['sales_credit']) }}</span></div>
+                @endif
+                <div class="flex justify-between border-t border-slate-200 pt-3"><span class="text-slate-500">{{ __('Of which cash in drawer') }}</span><span class="font-semibold">{{ Money::format($t['expected_cash'] ?? 0) }}</span></div>
+                <p class="text-xs text-slate-400">{{ __('The rest is in mobile money, bank or card.') }}</p>
+            </div>
+        </div>
+    </div>
+
     <div class="grid gap-5 lg:grid-cols-3">
         <div class="card card-body lg:col-span-2">
             <h2 class="mb-3 font-semibold">{{ __('Day summary') }}</h2>

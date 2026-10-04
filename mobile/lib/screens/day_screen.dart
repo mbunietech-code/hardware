@@ -47,6 +47,8 @@ class _DayScreenState extends State<DayScreen> {
         builder: (context, snap) {
           final t = snap.data ?? {};
           final expected = (session?.openingCash ?? 0) + (t['cash_sales'] ?? 0) - (t['cash_out'] ?? 0);
+          final sales = t['sales_total'] ?? 0;
+          final remaining = (session?.openingCash ?? 0) + sales - (t['purchases_total'] ?? 0) - (t['expenses_total'] ?? 0);
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -101,7 +103,12 @@ class _DayScreenState extends State<DayScreen> {
                         _row(context, tr('Expenses'), t['expenses_total']),
                         _row(context, tr('Debt payments'), t['debt_payments']),
                         const Divider(),
-                        _row(context, tr('Expected cash (this phone)'), expected, bold: true),
+                        // Opening cash + sales − purchases − expenses = what should remain today.
+                        _row(context, tr('Money remaining'), remaining, bold: true),
+                        _row(context, tr('Expenses as % of sales'), null,
+                            trailing: Text(sales > 0 ? '${((t['expenses_total'] ?? 0) / sales * 100).toStringAsFixed(1)}%' : '—',
+                                style: const TextStyle(fontWeight: FontWeight.w700))),
+                        _row(context, tr('Expected cash (this phone)'), expected),
                       ],
                     ),
                   ),
