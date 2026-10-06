@@ -27,7 +27,7 @@ class DatabaseSeeder extends Seeder
         User::firstOrCreate(['email' => 'shop@hardware.test'], [
             'business_id' => $business->id, 'shop_id' => $main->id, 'role' => User::ROLE_SHOP_ADMIN, 'name' => 'Main Shop Admin',
             'phone' => '0711111111', 'password' => 'password', 'is_active' => true,
-            'permissions' => ['view_reports' => true, 'adjust_stock' => true, 'record_capital' => false, 'manage_products' => false],
+            'permissions' => ['view_reports' => true, 'adjust_stock' => true, 'record_capital' => false, 'manage_products' => false, 'process_returns' => true],
         ]);
         User::firstOrCreate(['email' => 'branch@hardware.test'], [
             'business_id' => $business->id, 'shop_id' => $branch->id, 'role' => User::ROLE_SHOP_ADMIN, 'name' => 'Branch Admin',

@@ -29,9 +29,17 @@ class ReportController extends WebController
     public function show(Request $request, string $type)
     {
         $report = $this->reports->run($type, $request->query(), $request->user());
-        if ($request->query('export') === 'csv') {
-            return $this->reports->csv($report);
-        }
+
+        return match ($request->query('export')) {
+            'csv' => $this->reports->csv($report),
+            'xlsx' => $this->reports->xlsx($report),
+            'pdf' => $this->reports->pdf($report),
+            default => $this->renderReport($request, $report),
+        };
+    }
+
+    private function renderReport(Request $request, array $report)
+    {
 
         return view('reports.show', [
             'report' => $report,

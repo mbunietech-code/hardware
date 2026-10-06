@@ -11,13 +11,21 @@ use App\Models\ProfitAllocation;
 use App\Models\Purchase;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\SaleReturn;
 use App\Models\StockBalance;
 use App\Models\StockMovement;
 use App\Models\User;
 use App\Support\Money;
+use App\Support\Settings;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -37,6 +45,7 @@ class ReportService
         'daily_closing' => 'Daily closing',
         'profit' => 'Profit',
         'allocations' => '60/40 allocation',
+        'returns' => 'Returns',
         'audit' => 'Audit trail',
     ];
 
@@ -306,7 +315,8 @@ class ReportService
             'money' => ['revenue', 'cost', 'gross'],
             'qty' => ['qty'],
             'summary' => [
-                'Revenue (net of discounts)' => $summary['revenue'],
+                'Returns' => $summary['returns'],
+                'Revenue (net of discounts and returns)' => $summary['revenue'],
                 'Cost of goods sold' => $summary['cost_of_goods'],
                 'Gross profit' => $summary['gross_profit'],
                 'Expenses (all)' => $summary['expenses_total'],
@@ -338,6 +348,28 @@ class ReportService
             'rows' => $rows,
             'totals' => ['profit' => $rows->sum('profit'), 'primary' => $rows->sum('primary'), 'secondary' => $rows->sum('secondary')],
             'money' => ['profit', 'primary', 'secondary'],
+        ];
+    }
+
+    private function reportReturns(array $f): array
+    {
+        $q = SaleReturn::with('shop:id,name', 'user:id,name', 'sale:id,reference', 'items.product:id,name');
+        $this->shop($this->dates($q, $f, 'return_date'), $f)
+            ->when(! empty($f['user_id']), fn ($q) => $q->where('user_id', $f['user_id']))
+            ->when(! empty($f['product_id']), fn ($q) => $q->whereHas('items', fn ($i) => $i->where('product_id', $f['product_id'])));
+        $rows = $q->orderByDesc('id')->limit(self::LIMIT)->get()->map(fn (SaleReturn $r) => [
+            'reference' => $r->reference, 'date' => $r->return_date->toDateString(), 'sale' => $r->sale->reference,
+            'shop' => $r->shop->name, 'user' => $r->user->name,
+            'items' => $r->items->map(fn ($i) => Money::formatQty($i->quantity).' × '.$i->product->name.($i->restocked ? '' : ' ('.__('damaged').')'))->implode(', '),
+            'reason' => $r->reason, 'value' => (float) $r->return_value, 'debt' => (float) $r->debt_reduction, 'refund' => (float) $r->refund_amount,
+        ]);
+
+        return [
+            'title' => 'Returns report',
+            'columns' => ['reference' => 'Reference', 'date' => 'Date', 'sale' => 'Sale', 'shop' => 'Shop', 'user' => 'User', 'items' => 'Items', 'reason' => 'Reason', 'value' => 'Return value', 'debt' => 'Taken off debt', 'refund' => 'Refunded'],
+            'rows' => $rows,
+            'totals' => ['value' => $rows->sum('value'), 'debt' => $rows->sum('debt'), 'refund' => $rows->sum('refund')],
+            'money' => ['value', 'debt', 'refund'],
         ];
     }
 
@@ -380,5 +412,69 @@ class ReportService
             }
             fclose($out);
         }, $name, ['Content-Type' => 'text/csv']);
+    }
+
+    /** Excel export with headings, number formats and totals. */
+    public function xlsx(array $report): StreamedResponse
+    {
+        $book = new Spreadsheet;
+        $sheet = $book->getActiveSheet()->setTitle(mb_substr(str_replace(['/', '\\', '?', '*', '[', ']', ':'], '-', __($report['title'])), 0, 31));
+        $keys = array_keys($report['columns']);
+        $lastCol = Coordinate::stringFromColumnIndex(count($keys));
+
+        $sheet->setCellValue('A1', Settings::get('business_name').' – '.__($report['title']));
+        $sheet->setCellValue('A2', empty($report['no_dates'])
+            ? __('Period: :from to :to', ['from' => $report['filters']['from'], 'to' => $report['filters']['to']])
+            : __('As at :time', ['time' => now()->format('d M Y H:i')]));
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->fromArray(array_map('__', array_values($report['columns'])), null, 'A4');
+        $sheet->getStyle("A4:{$lastCol}4")->getFont()->setBold(true);
+        $sheet->getStyle("A4:{$lastCol}4")->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('E2F4F1');
+
+        $r = 5;
+        foreach ($report['rows'] as $row) {
+            $sheet->fromArray(array_map(fn ($k) => $row[$k] ?? '', $keys), null, "A{$r}", true);
+            $r++;
+        }
+        if ($report['totals'] && count($report['rows'])) {
+            $sheet->fromArray(array_map(fn ($k) => $report['totals'][$k] ?? '', $keys), null, "A{$r}", true);
+            $sheet->setCellValue("A{$r}", __('Totals (:n rows)', ['n' => count($report['rows'])]));
+            $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFont()->setBold(true);
+            $r++;
+        }
+        foreach ($keys as $i => $k) {
+            $col = Coordinate::stringFromColumnIndex($i + 1);
+            if (in_array($k, $report['money'] ?? [], true)) {
+                $sheet->getStyle("{$col}5:{$col}{$r}")->getNumberFormat()->setFormatCode('#,##0.00');
+            }
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        $r++;
+        foreach ($report['summary'] ?? [] as $label => $value) {
+            $sheet->setCellValue("A{$r}", __($label));
+            $sheet->setCellValue("B{$r}", $value);
+            $sheet->getStyle("B{$r}")->getNumberFormat()->setFormatCode('#,##0.00');
+            $r++;
+        }
+
+        $writer = new Xlsx($book);
+
+        return response()->streamDownload(fn () => $writer->save('php://output'), $this->fileName($report, 'xlsx'),
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
+    }
+
+    /** PDF export (landscape A4) rendered from a print-friendly view. */
+    public function pdf(array $report): Response
+    {
+        ini_set('memory_limit', '512M'); // large reports (up to LIMIT rows) need more than the default
+
+        return Pdf::loadView('reports.pdf', ['report' => $report])
+            ->setPaper('a4', 'landscape')
+            ->download($this->fileName($report, 'pdf'));
+    }
+
+    private function fileName(array $report, string $ext): string
+    {
+        return $report['type'].'_'.$report['filters']['from'].'_'.$report['filters']['to'].'.'.$ext;
     }
 }

@@ -17,6 +17,7 @@ class StockMovement extends Model
         'adjustment_in' => 'Adjustment (increase)',
         'adjustment_out' => 'Adjustment (decrease)',
         'sale_void' => 'Sale voided (returned to stock)',
+        'sale_return' => 'Customer return (back to stock)',
         'purchase_void' => 'Purchase voided (removed from stock)',
     ];
 

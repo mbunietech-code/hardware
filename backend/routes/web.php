@@ -47,6 +47,7 @@ Route::middleware('auth')->group(function () {
     Route::get('sales/{sale}', [SaleController::class, 'show'])->name('sales.show');
     Route::get('sales/{sale}/receipt', [SaleController::class, 'receipt'])->name('sales.receipt');
     Route::post('sales/{sale}/void', [SaleController::class, 'void'])->name('sales.void');
+    Route::post('sales/{sale}/returns', [SaleController::class, 'storeReturn'])->name('sales.returns.store');
     Route::get('purchases', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('purchases/create', [PurchaseController::class, 'create'])->name('purchases.create');
     Route::post('purchases', [PurchaseController::class, 'store'])->name('purchases.store');
@@ -69,6 +70,9 @@ Route::middleware('auth')->group(function () {
     // Inventory
     Route::get('products', [CatalogController::class, 'products'])->name('products.index');
     Route::get('products/create', [CatalogController::class, 'createProduct'])->name('products.create');
+    Route::get('products/import', [CatalogController::class, 'importForm'])->name('products.import');
+    Route::post('products/import', [CatalogController::class, 'import'])->name('products.import.store');
+    Route::get('products/import/template', [CatalogController::class, 'importTemplate'])->name('products.import.template');
     Route::post('products', [CatalogController::class, 'storeProduct'])->name('products.store');
     Route::get('products/{product}', [CatalogController::class, 'showProduct'])->name('products.show');
     Route::get('products/{product}/edit', [CatalogController::class, 'editProduct'])->name('products.edit');

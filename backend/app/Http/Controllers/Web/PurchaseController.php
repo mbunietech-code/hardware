@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Models\Category;
+use App\Models\DailySession;
 use App\Models\Product;
 use App\Models\Purchase;
+use App\Models\StockBalance;
 use App\Models\Supplier;
 use App\Services\PurchaseService;
 use Illuminate\Http\Request;
@@ -30,13 +33,13 @@ class PurchaseController extends WebController
     {
         $shops = $this->shopOptions($request);
         $shopId = (int) ($request->input('shop_id') ?: $request->user()->shop_id ?: array_key_first($shops));
-        $stock = \App\Models\StockBalance::where('shop_id', $shopId)->pluck('quantity', 'product_id');
+        $stock = StockBalance::where('shop_id', $shopId)->pluck('quantity', 'product_id');
 
         return view('purchases.create', [
-            'session' => \App\Models\DailySession::where('shop_id', $shopId)->whereDate('business_date', now()->toDateString())->first(),
+            'session' => DailySession::where('shop_id', $shopId)->whereDate('business_date', now()->toDateString())->first(),
             'shops' => $shops,
             'shopId' => $shopId,
-            'categories' => \App\Models\Category::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
+            'categories' => Category::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
             'products' => Product::where('is_active', true)->orderBy('name')->get(['id', 'category_id', 'code', 'name', 'unit', 'cost_price'])
                 ->map(fn ($p) => $p->toArray() + ['stock' => (float) ($stock[$p->id] ?? 0)]),
             'suppliers' => Supplier::where('is_active', true)->orderBy('name')->pluck('name', 'id'),

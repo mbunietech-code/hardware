@@ -22,6 +22,7 @@
             ['+', 'Capital injected', (float) ($t['capital_in'] ?? 0)],
             ['−', 'Purchases paid', (float) ($t['purchases_paid'] ?? 0)],
             ['−', 'Expenses', (float) ($t['expenses_total'] ?? 0)],
+            ['−', 'Refunds paid', (float) ($t['refunds_paid'] ?? 0)],
             ['−', 'Debt payments made', (float) ($t['debt_payments_made'] ?? 0)],
             ['−', 'Capital withdrawn', (float) ($t['capital_out'] ?? 0)],
         ];

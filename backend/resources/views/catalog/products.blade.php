@@ -1,7 +1,7 @@
 @php use App\Support\Money; @endphp
 <x-layout :title="__('Products')">
     <x-page-header icon="box" :title="__('Products')" :subtitle="$shopId ? __('Stock shown for :shop', ['shop' => $shops[$shopId] ?? '']) : __('Stock shown across all shops')">
-        @can('permission', 'manage_products')<a href="{{ route('products.create') }}" class="btn btn-primary">{{ __('+ New product') }}</a>@endcan
+        @can('permission', 'manage_products')<a href="{{ route('products.import') }}" class="btn"><x-icon name="download" class="h-4 w-4 rotate-180" />{{ __('Import') }}</a><a href="{{ route('products.create') }}" class="btn btn-primary">{{ __('+ New product') }}</a>@endcan
     </x-page-header>
     <x-filters :shops="$shops" :dates="false">
         <x-field name="search" :label="__('Search name or code')" :value="request('search')" />

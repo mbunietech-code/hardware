@@ -11,6 +11,7 @@ use App\Services\CapitalService;
 use App\Services\DebtService;
 use App\Services\ExpenseService;
 use App\Services\PurchaseService;
+use App\Services\ReturnService;
 use App\Services\SaleService;
 use Illuminate\Http\Request;
 
@@ -56,6 +57,11 @@ class TransactionController extends ApiController
     public function voidSale(Request $request, Sale $sale)
     {
         return response()->json(['data' => $this->sales->void($sale, $this->voidReason($request), $request->user())]);
+    }
+
+    public function returnSale(Request $request, Sale $sale, ReturnService $returns)
+    {
+        return response()->json(['data' => $returns->create($sale, $request->all(), $request->user())], 201);
     }
 
     // Purchases

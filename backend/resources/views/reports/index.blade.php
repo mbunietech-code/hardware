@@ -12,10 +12,11 @@
             'daily_closing' => 'Daily totals, cash counts and exceptions.',
             'profit' => 'Gross and net profit by product, category, shop or day.',
             'allocations' => 'Approved and draft 60/40 allocations.',
+            'returns' => 'Goods returned by customers and money refunded.',
             'audit' => 'Who did what, when, and from which device.',
         ]; @endphp
         @foreach ($types as $key => $label)
-            @php $icon = ['sales' => 'cart', 'purchases' => 'truck', 'stock' => 'layers', 'stock_movements' => 'arrows', 'expenses' => 'receipt', 'debts' => 'wallet', 'capital' => 'piggy', 'daily_closing' => 'calendar', 'profit' => 'trend', 'allocations' => 'pie', 'audit' => 'shield'][$key] ?? 'chart'; @endphp
+            @php $icon = ['sales' => 'cart', 'purchases' => 'truck', 'stock' => 'layers', 'stock_movements' => 'arrows', 'expenses' => 'receipt', 'debts' => 'wallet', 'capital' => 'piggy', 'daily_closing' => 'calendar', 'profit' => 'trend', 'allocations' => 'pie', 'audit' => 'shield', 'returns' => 'refresh'][$key] ?? 'chart'; @endphp
             <a href="{{ route('reports.show', $key) }}" class="card group flex items-start gap-4 p-5 transition hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lift">
                 <div class="icon-chip bg-brand-100 text-brand-700 transition group-hover:bg-brand-600 group-hover:text-white"><x-icon :name="$icon" /></div>
                 <div class="min-w-0 flex-1">

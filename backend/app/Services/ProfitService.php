@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Expense;
 use App\Models\ProfitAllocation;
 use App\Models\Sale;
+use App\Models\SaleReturn;
 use App\Models\User;
 use App\Support\Money;
 use App\Support\Settings;
@@ -29,8 +30,13 @@ class ProfitService
             ->when($shopIds !== null, fn ($q) => $q->whereIn('shop_id', $shopIds))
             ->join('expense_categories', 'expense_categories.id', '=', 'expenses.expense_category_id');
 
-        $revenue = Money::round((clone $sales)->sum('total'));
-        $cogs = Money::round((clone $sales)->sum('cost_total'));
+        // Customer returns reduce revenue; restocked goods also leave the cost of goods sold.
+        $returns = SaleReturn::whereBetween('return_date', [$from, $to])
+            ->when($shopId, fn ($q) => $q->where('shop_id', $shopId))
+            ->when($shopIds !== null, fn ($q) => $q->whereIn('shop_id', $shopIds));
+        $returnsValue = Money::round((clone $returns)->sum('return_value'));
+        $revenue = Money::round((clone $sales)->sum('total') - $returnsValue);
+        $cogs = Money::round((clone $sales)->sum('cost_total') - (clone $returns)->sum('cost_restocked'));
         $gross = Money::round($revenue - $cogs);
         $expensesTotal = Money::round((clone $expenses)->sum('expenses.amount'));
         $expensesReducing = Money::round((clone $expenses)->where('expense_categories.reduces_profit', true)->sum('expenses.amount'));
@@ -42,6 +48,7 @@ class ProfitService
             'period_end' => $to,
             'revenue' => $revenue,
             'discounts' => Money::round((clone $sales)->sum('discount')),
+            'returns' => $returnsValue,
             'cost_of_goods' => $cogs,
             'gross_profit' => $gross,
             'expenses_total' => $expensesTotal,

@@ -7,6 +7,7 @@ use App\Models\Debt;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Sale;
+use App\Models\SaleReturn;
 use App\Models\StockAdjustment;
 use App\Models\SyncReceipt;
 use App\Models\User;
@@ -32,6 +33,7 @@ class AppServiceProvider extends ServiceProvider
 
         Relation::enforceMorphMap([
             'sale' => Sale::class,
+            'sale_return' => SaleReturn::class,
             'purchase' => Purchase::class,
             'stock_adjustment' => StockAdjustment::class,
             'product' => Product::class,

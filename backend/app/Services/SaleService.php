@@ -192,6 +192,9 @@ class SaleService
                 $this->fail('already_voided', __('This sale is already voided.'));
             }
             $this->guardClosedDay($sale->daily_session_id, $user);
+            if ($sale->returns()->exists()) {
+                $this->fail('has_returns', __('This sale has returns recorded. Use returns for further corrections instead of voiding.'));
+            }
             $debt = Debt::where('source_type', $sale->getMorphClass())->where('source_id', $sale->id)->first();
             if ($debt && $debt->payments()->exists()) {
                 $this->fail('debt_has_payments', __('This credit sale has debt repayments recorded. Reverse them before voiding.'));

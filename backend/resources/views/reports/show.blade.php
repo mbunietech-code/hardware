@@ -10,8 +10,10 @@
 @endphp
 <x-layout :title="__($report['title'])">
     <x-page-header icon="chart" :title="__($report['title'])" :subtitle="empty($report['no_dates']) ? __('Period: :from to :to', ['from' => $f['from'], 'to' => $f['to']]) : __('As at :time', ['time' => now()->format('d M Y H:i')])">
-        <a href="{{ request()->fullUrlWithQuery(['export' => 'csv']) }}" class="btn">{{ __('Export CSV') }}</a>
-        <button onclick="window.print()" class="btn">{{ __('Print / PDF') }}</button>
+        <a href="{{ request()->fullUrlWithQuery(['export' => 'xlsx']) }}" class="btn"><x-icon name="download" class="h-4 w-4" />Excel</a>
+        <a href="{{ request()->fullUrlWithQuery(['export' => 'pdf']) }}" class="btn"><x-icon name="download" class="h-4 w-4" />PDF</a>
+        <a href="{{ request()->fullUrlWithQuery(['export' => 'csv']) }}" class="btn">CSV</a>
+        <button onclick="window.print()" class="btn"><x-icon name="printer" class="h-4 w-4" />{{ __('Print') }}</button>
         <a href="{{ route('reports.index') }}" class="btn">{{ __('All reports') }}</a>
     </x-page-header>
 
@@ -23,10 +25,10 @@
         @if (auth()->user()->isSuperAdmin())
             <x-select name="shop_id" :label="__('Shop')" :options="$shops" :value="$f['shop_id'] ?? ''" :placeholder="__('All shops')" />
         @endif
-        @if (in_array($type, ['sales', 'expenses', 'capital', 'audit']))
+        @if (in_array($type, ['sales', 'expenses', 'capital', 'audit', 'returns']))
             <x-select name="user_id" :label="__('User')" :options="$options['users']" :value="$f['user_id'] ?? ''" :placeholder="__('Any')" />
         @endif
-        @if (in_array($type, ['sales', 'purchases', 'stock', 'stock_movements', 'profit']))
+        @if (in_array($type, ['sales', 'purchases', 'stock', 'stock_movements', 'profit', 'returns']))
             <x-select name="product_id" :label="__('Product')" :options="$options['products']" :value="$f['product_id'] ?? ''" :placeholder="__('Any')" />
         @endif
         @if (in_array($type, ['stock', 'profit']))

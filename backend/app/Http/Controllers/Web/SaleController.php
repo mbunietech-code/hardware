@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Models\Category;
 use App\Models\Customer;
+use App\Models\DailySession;
+use App\Models\Debt;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\StockBalance;
+use App\Services\ReturnService;
 use App\Services\SaleService;
+use App\Support\Money;
 use Illuminate\Http\Request;
 
 class SaleController extends WebController
@@ -34,13 +39,13 @@ class SaleController extends WebController
         $stock = StockBalance::where('shop_id', $shopId)->pluck('quantity', 'product_id');
 
         return view('sales.create', [
-            'session' => \App\Models\DailySession::where('shop_id', $shopId)->whereDate('business_date', now()->toDateString())->first(),
+            'session' => DailySession::where('shop_id', $shopId)->whereDate('business_date', now()->toDateString())->first(),
             'shops' => $shops,
             'shopId' => $shopId,
             'products' => Product::where('is_active', true)->orderBy('name')->get(['id', 'category_id', 'code', 'name', 'unit', 'selling_price', 'cost_price'])
                 ->map(fn ($p) => $p->toArray() + ['stock' => (float) ($stock[$p->id] ?? 0)]),
             'customers' => Customer::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
-            'categories' => \App\Models\Category::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
+            'categories' => Category::where('is_active', true)->orderBy('name')->pluck('name', 'id'),
         ]);
     }
 
@@ -60,11 +65,31 @@ class SaleController extends WebController
             ->with('success', __('Sale :ref saved.', ['ref' => $sale->reference]))->with('warnings', $this->service->warnings);
     }
 
-    public function show(Request $request, Sale $sale)
+    public function show(Request $request, Sale $sale, ReturnService $returns)
     {
         $this->authorizeShopRecord($request, $sale->shop_id);
+        $sale->load('items.product', 'shop', 'customer', 'user', 'returns.items.product', 'returns.user');
+        $debt = Debt::where('source_type', 'sale')->where('source_id', $sale->id)->whereIn('status', ['open', 'partial'])->first();
 
-        return view('sales.show', ['sale' => $sale->load('items.product', 'shop', 'customer', 'user', 'items')]);
+        return view('sales.show', [
+            'sale' => $sale,
+            'returnable' => $returns->returnable($sale),
+            'unitValues' => $sale->items->mapWithKeys(fn ($i) => [$i->id => $returns->unitValue($sale, $i)])->all(),
+            'debtBalance' => (float) ($debt?->balance ?? 0),
+        ]);
+    }
+
+    public function storeReturn(Request $request, Sale $sale, ReturnService $returns)
+    {
+        $data = $request->all();
+        $data['items'] = collect($data['items'] ?? [])->map(fn ($row, $id) => [
+            'sale_item_id' => (int) $id, 'quantity' => $row['quantity'] ?? 0, 'restock' => ! empty($row['restock']),
+        ])->values()->all();
+        $return = $returns->create($sale, $data, $request->user());
+
+        return back()->with('success', __('Return :ref saved. Refund to customer: :amount.', [
+            'ref' => $return->reference, 'amount' => Money::format($return->refund_amount),
+        ]));
     }
 
     public function receipt(Request $request, Sale $sale)

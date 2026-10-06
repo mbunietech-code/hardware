@@ -10,6 +10,7 @@ use App\Models\Debt;
 use App\Models\Device;
 use App\Models\ExpenseCategory;
 use App\Models\Product;
+use App\Models\Sale;
 use App\Models\Shop;
 use App\Models\StockBalance;
 use App\Models\Supplier;
@@ -34,7 +35,7 @@ class SyncService
 {
     public const ENTITIES = [
         'customer', 'supplier', 'product', 'daily_session_open', 'daily_session_close', 'sale', 'purchase',
-        'expense', 'capital_entry', 'debt', 'debt_payment', 'stock_adjustment',
+        'expense', 'capital_entry', 'debt', 'debt_payment', 'stock_adjustment', 'sale_return',
     ];
 
     public function __construct(
@@ -143,6 +144,9 @@ class SyncService
             'debt' => $this->debts->create($payload, $user, $options),
             'debt_payment' => $this->debts->pay($payload, $user, $options),
             'stock_adjustment' => $this->stock->adjust($payload, $user, $options),
+            'sale_return' => app(ReturnService::class)->create(
+                Sale::where('local_uuid', $payload['sale_local_uuid'] ?? '')->orWhere('id', $payload['sale_id'] ?? 0)->firstOrFail(),
+                $payload, $user, $options),
         };
     }
 

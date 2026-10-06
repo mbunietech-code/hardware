@@ -9,7 +9,9 @@ use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Services\CatalogService;
 use App\Services\PartyService;
+use App\Services\ProductImportService;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class CatalogController extends WebController
 {
@@ -45,6 +47,36 @@ class CatalogController extends WebController
         $product = $this->catalog->saveProduct($request->all() + ['is_active' => $request->boolean('is_active')], $request->user());
 
         return redirect()->route('products.show', $product)->with('success', __('Product created. Use a purchase or stock adjustment to add opening stock.'));
+    }
+
+    public function importForm(Request $request)
+    {
+        abort_unless($request->user()->hasPermission('manage_products'), 403);
+
+        return view('catalog.import', ['shops' => $this->shopOptions($request)]);
+    }
+
+    public function import(Request $request, ProductImportService $importer)
+    {
+        $data = $request->validate([
+            'file' => 'required|file|max:10240|mimes:xlsx,xls,csv,txt',
+            'shop_id' => 'nullable|integer|exists:shops,id',
+        ]);
+        if (! empty($data['shop_id'])) {
+            abort_unless($request->user()->canAccessShop((int) $data['shop_id']), 403);
+        }
+        $result = $importer->import($request->file('file')->getRealPath(), $request->user(), $data['shop_id'] ?? null);
+
+        return redirect()->route('products.import')->with('import', $result)
+            ->with('success', __('Import finished: :c created, :u updated, :s stock levels set.', ['c' => $result['created'], 'u' => $result['updated'], 's' => $result['stock']]));
+    }
+
+    public function importTemplate(ProductImportService $importer)
+    {
+        $writer = new Xlsx($importer->template());
+
+        return response()->streamDownload(fn () => $writer->save('php://output'), 'products_template.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
     }
 
     public function showProduct(Request $request, Product $product)

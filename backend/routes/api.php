@@ -46,6 +46,7 @@ Route::prefix('v1')->group(function () {
         Route::post('sales', [TransactionController::class, 'storeSale']);
         Route::get('sales/{sale}', [TransactionController::class, 'showSale']);
         Route::post('sales/{sale}/void', [TransactionController::class, 'voidSale']);
+        Route::post('sales/{sale}/returns', [TransactionController::class, 'returnSale']);
         Route::get('purchases', [TransactionController::class, 'purchases']);
         Route::post('purchases', [TransactionController::class, 'storePurchase']);
         Route::get('purchases/{purchase}', [TransactionController::class, 'showPurchase']);

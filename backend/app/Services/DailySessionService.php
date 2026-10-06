@@ -9,6 +9,7 @@ use App\Models\DebtPayment;
 use App\Models\Expense;
 use App\Models\Purchase;
 use App\Models\Sale;
+use App\Models\SaleReturn;
 use App\Models\User;
 use App\Support\Money;
 use App\Support\Settings;
@@ -135,7 +136,10 @@ class DailySessionService
             'debt_payments_made' => Money::round((clone $payments)->where('debts.type', 'payable')->sum('debt_payments.amount')),
             'new_debts_receivable' => Money::round(Debt::where('daily_session_id', $sid)->where('type', 'receivable')->where('status', '!=', 'cancelled')->sum('original_amount')),
             'new_debts_payable' => Money::round(Debt::where('daily_session_id', $sid)->where('type', 'payable')->where('status', '!=', 'cancelled')->sum('original_amount')),
+            'returns_total' => Money::round(SaleReturn::where('daily_session_id', $sid)->sum('return_value')),
+            'refunds_paid' => Money::round(SaleReturn::where('daily_session_id', $sid)->sum('refund_amount')),
         ];
+        $cashRefunds = (float) SaleReturn::where('daily_session_id', $sid)->where('refund_method', 'cash')->sum('refund_amount');
 
         // Expected cash in the drawer counts only cash-method money movements.
         $cash = fn ($q, $col) => (float) (clone $q)->where('payment_method', 'cash')->sum($col);
@@ -148,6 +152,7 @@ class DailySessionService
             - $cash($expenses, 'amount')
             + (float) (clone $capital)->where('type', 'injection')->where('payment_method', 'cash')->sum('amount')
             - (float) (clone $capital)->where('type', 'withdrawal')->where('payment_method', 'cash')->sum('amount')
+            - $cashRefunds
         );
 
         return $t;

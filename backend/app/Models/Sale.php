@@ -10,7 +10,7 @@ class Sale extends Model
 {
     protected $fillable = [
         'reference', 'shop_id', 'daily_session_id', 'customer_id', 'user_id', 'sale_date', 'subtotal', 'discount',
-        'total', 'cost_total', 'amount_paid', 'balance', 'payment_method', 'payment_status', 'status', 'notes',
+        'total', 'cost_total', 'amount_paid', 'balance', 'returned_total', 'payment_method', 'payment_status', 'status', 'notes',
         'voided_by', 'voided_at', 'void_reason',
         'local_uuid', 'device_id', 'source', 'client_created_at', 'synced_at',
     ];
@@ -25,6 +25,11 @@ class Sale extends Model
     public function items(): HasMany
     {
         return $this->hasMany(SaleItem::class);
+    }
+
+    public function returns(): HasMany
+    {
+        return $this->hasMany(SaleReturn::class);
     }
 
     public function shop(): BelongsTo

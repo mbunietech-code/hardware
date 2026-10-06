@@ -29,6 +29,7 @@ class User extends Authenticatable
         'view_reports' => 'View own-shop reports',
         'view_audit' => 'View own-shop audit trail',
         'void_transactions' => 'Void / correct transactions',
+        'process_returns' => 'Process returns and refunds',
     ];
 
     protected $fillable = [
