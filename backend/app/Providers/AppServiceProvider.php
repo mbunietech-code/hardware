@@ -12,6 +12,7 @@ use App\Models\StockAdjustment;
 use App\Models\SyncReceipt;
 use App\Models\User;
 use App\Support\ActionContext;
+use App\Support\MailConfig;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
@@ -29,6 +30,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        try {
+            MailConfig::apply();
+        } catch (\Throwable) {
+            // database not ready yet (fresh install / migrations)
+        }
+
         Paginator::useTailwind();
 
         Relation::enforceMorphMap([

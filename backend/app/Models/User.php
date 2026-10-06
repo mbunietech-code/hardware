@@ -33,7 +33,7 @@ class User extends Authenticatable
     ];
 
     protected $fillable = [
-        'business_id', 'shop_id', 'role', 'name', 'email', 'phone', 'password',
+        'business_id', 'shop_id', 'role', 'name', 'email', 'phone', 'password', 'must_change_password',
         'permissions', 'is_active', 'last_login_at',
     ];
 
@@ -47,6 +47,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'permissions' => 'array',
             'is_active' => 'boolean',
+            'must_change_password' => 'boolean',
         ];
     }
 

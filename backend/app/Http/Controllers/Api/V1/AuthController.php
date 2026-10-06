@@ -99,6 +99,7 @@ class AuthController extends ApiController
             'email' => $user->email,
             'phone' => $user->phone,
             'role' => $user->role,
+            'must_change_password' => (bool) $user->must_change_password,
             'shop_id' => $user->shop_id,
             'shop' => $user->shop?->only(['id', 'name', 'code', 'location', 'phone']),
             'permissions' => collect(User::SHOP_PERMISSIONS)->keys()->mapWithKeys(fn ($p) => [$p => $user->hasPermission($p)]),

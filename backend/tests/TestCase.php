@@ -39,6 +39,7 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
         Settings::flush();
         $this->seed(DatabaseSeeder::class);
+        User::query()->update(['must_change_password' => false]); // tests below exercise the flag explicitly
         $this->admin = User::where('email', 'admin@hardware.test')->first();
         $this->shopAdmin = User::where('email', 'shop@hardware.test')->first();
         $this->branchAdmin = User::where('email', 'branch@hardware.test')->first();

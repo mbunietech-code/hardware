@@ -70,10 +70,13 @@ class ProfitService
             'period_start' => 'required|date',
             'period_end' => 'required|date|after_or_equal:period_start',
             'shop_id' => 'nullable|integer|exists:shops,id',
+            'period_type' => 'nullable|in:daily,weekly,monthly,custom',
             'notes' => 'nullable|string|max:1000',
         ])->validate();
+        $type = $data['period_type'] ?? 'custom';
 
-        $overlap = ProfitAllocation::where('status', 'approved')
+        // Daily, weekly and monthly allocations are separate views; only the same kind may not overlap.
+        $overlap = ProfitAllocation::where('status', 'approved')->where('period_type', $type)
             ->where('period_start', '<=', $data['period_end'])->where('period_end', '>=', $data['period_start'])
             ->where(fn ($q) => empty($data['shop_id']) ? $q : $q->whereNull('shop_id')->orWhere('shop_id', $data['shop_id']))
             ->exists();
@@ -90,6 +93,7 @@ class ProfitService
             'shop_id' => $data['shop_id'] ?? null,
             'period_start' => $data['period_start'],
             'period_end' => $data['period_end'],
+            'period_type' => $type,
             'revenue' => $s['revenue'],
             'cost_of_goods' => $s['cost_of_goods'],
             'expenses' => $s['expenses_reducing_profit'],
@@ -104,7 +108,7 @@ class ProfitService
                 'profit_formula' => $s['formula'],
                 'costing_method' => $s['costing_method'],
                 'rules_approved' => $s['approved'],
-                'timing' => Settings::get('allocation_timing'),
+                'timing' => $type,
                 'gross_profit' => $s['gross_profit'],
                 'net_profit' => $s['net_profit'],
             ],
@@ -115,6 +119,26 @@ class ProfitService
         AuditLogger::log('allocation.generated', $allocation);
 
         return $allocation;
+    }
+
+    /** Live (unsaved) split of profit for today, this week and this month. */
+    public function allocationOverview(?int $shopId = null, ?array $shopIds = null): array
+    {
+        [$p1, $p2] = Settings::allocationPercents();
+        $periods = [
+            'daily' => [now()->toDateString(), now()->toDateString()],
+            'weekly' => [now()->startOfWeek()->toDateString(), now()->toDateString()],
+            'monthly' => [now()->startOfMonth()->toDateString(), now()->toDateString()],
+        ];
+
+        return collect($periods)->map(function ($range, $type) use ($p1, $shopId, $shopIds) {
+            $profit = $this->summary($range[0], $range[1], $shopId, $shopIds)['profit'];
+            $base = max(0, $profit);
+            $primary = Money::round($base * $p1 / 100);
+
+            return ['type' => $type, 'from' => $range[0], 'to' => $range[1], 'profit' => $profit,
+                'primary' => $primary, 'secondary' => Money::round($base - $primary)];
+        })->all();
     }
 
     public function setAllocationStatus(ProfitAllocation $allocation, string $status, User $user): ProfitAllocation

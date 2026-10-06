@@ -109,17 +109,17 @@ class AdminController extends ApiController
 
     public function settings()
     {
-        return response()->json(['data' => Settings::all(), 'definitions' => Settings::DEFINITIONS]);
+        return response()->json(['data' => Settings::safe(), 'definitions' => Settings::DEFINITIONS]);
     }
 
     public function updateSettings(Request $request)
     {
-        $before = Settings::all();
+        $before = Settings::safe();
         foreach ($request->only(array_keys(Settings::DEFINITIONS)) as $key => $value) {
             Settings::set($key, $value);
         }
-        AuditLogger::log('settings.updated', null, $before, Settings::all());
+        AuditLogger::log('settings.updated', null, $before, Settings::safe());
 
-        return response()->json(['data' => Settings::all()]);
+        return response()->json(['data' => Settings::safe()]);
     }
 }

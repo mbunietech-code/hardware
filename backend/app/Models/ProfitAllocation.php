@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ProfitAllocation extends Model
 {
     protected $fillable = [
-        'shop_id', 'period_start', 'period_end', 'revenue', 'cost_of_goods', 'expenses', 'profit_amount',
+        'shop_id', 'period_start', 'period_end', 'period_type', 'revenue', 'cost_of_goods', 'expenses', 'profit_amount',
         'primary_percent', 'secondary_percent', 'primary_amount', 'secondary_amount', 'primary_label', 'secondary_label',
         'formula_config', 'status', 'notes', 'created_by', 'approved_by', 'approved_at',
     ];

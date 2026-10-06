@@ -102,6 +102,8 @@ class NotificationService
             });
         }
 
+        $count['sms'] = app(SmsService::class)->sendScheduledDebtReminders();
+
         return $count;
     }
 }

@@ -63,6 +63,7 @@ class ReportController extends WebController
         return view('reports.allocations', [
             'allocations' => ProfitAllocation::with('shop:id,name', 'creator:id,name', 'approver:id,name')->latest('id')->paginate(20),
             'preview' => $this->profit->summary($from, $to, $request->integer('shop_id') ?: null),
+            'overview' => $this->profit->allocationOverview($request->integer('shop_id') ?: null),
             'percents' => Settings::allocationPercents(),
             'labels' => [Settings::get('allocation_primary_label'), Settings::get('allocation_secondary_label')],
             'shops' => $this->shopOptions($request),

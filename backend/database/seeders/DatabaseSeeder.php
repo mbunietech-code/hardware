@@ -22,16 +22,16 @@ class DatabaseSeeder extends Seeder
 
         User::firstOrCreate(['email' => 'admin@hardware.test'], [
             'business_id' => $business->id, 'role' => User::ROLE_SUPER_ADMIN, 'name' => 'Super Admin',
-            'phone' => '0700000000', 'password' => 'password', 'is_active' => true,
+            'phone' => '0700000000', 'password' => 'password', 'must_change_password' => true, 'is_active' => true,
         ]);
         User::firstOrCreate(['email' => 'shop@hardware.test'], [
             'business_id' => $business->id, 'shop_id' => $main->id, 'role' => User::ROLE_SHOP_ADMIN, 'name' => 'Main Shop Admin',
-            'phone' => '0711111111', 'password' => 'password', 'is_active' => true,
+            'phone' => '0711111111', 'password' => 'password', 'must_change_password' => true, 'is_active' => true,
             'permissions' => ['view_reports' => true, 'adjust_stock' => true, 'record_capital' => false, 'manage_products' => false, 'process_returns' => true],
         ]);
         User::firstOrCreate(['email' => 'branch@hardware.test'], [
             'business_id' => $business->id, 'shop_id' => $branch->id, 'role' => User::ROLE_SHOP_ADMIN, 'name' => 'Branch Admin',
-            'phone' => '0722222222', 'password' => 'password', 'is_active' => true,
+            'phone' => '0722222222', 'password' => 'password', 'must_change_password' => true, 'is_active' => true,
             'permissions' => ['view_reports' => true],
         ]);
 

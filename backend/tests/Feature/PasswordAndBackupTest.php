@@ -39,4 +39,26 @@ class PasswordAndBackupTest extends TestCase
         $this->get('/backups/..%2F.env')->assertNotFound();
         $this->actingAs($this->shopAdmin)->get('/backups')->assertForbidden();
     }
+
+    public function test_default_password_must_be_changed_before_using_the_system(): void
+    {
+        $this->shopAdmin->update(['must_change_password' => true]);
+        $this->actingAs($this->shopAdmin)->get('/')->assertRedirect('/profile');
+        $this->get('/sales')->assertRedirect('/profile');
+        $this->get('/profile')->assertOk();
+
+        $this->put('/profile/password', ['current_password' => 'password', 'password' => 'password', 'password_confirmation' => 'password'])
+            ->assertSessionHasErrors('password');
+        $this->put('/profile/password', ['current_password' => 'password', 'password' => 'Duka2026!', 'password_confirmation' => 'Duka2026!'])
+            ->assertSessionHas('success');
+        $this->assertFalse($this->shopAdmin->fresh()->must_change_password);
+        $this->get('/')->assertOk();
+
+        // A password set by the Super Admin is temporary again.
+        $this->actingAs($this->admin)->put("/users/{$this->shopAdmin->id}", [
+            'name' => $this->shopAdmin->name, 'email' => $this->shopAdmin->email, 'role' => 'shop_admin', 'shop_id' => $this->main->id,
+            'password' => 'Temp12345', 'password_confirmation' => 'Temp12345', 'is_active' => 1,
+        ])->assertRedirect('/users');
+        $this->assertTrue($this->shopAdmin->fresh()->must_change_password);
+    }
 }

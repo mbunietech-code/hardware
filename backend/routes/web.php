@@ -70,6 +70,7 @@ Route::middleware('auth')->group(function () {
     Route::get('debts/{debt}', [FinanceController::class, 'showDebt'])->name('debts.show');
     Route::post('debts/{debt}/payments', [FinanceController::class, 'payDebt'])->name('debts.pay');
     Route::post('debts/{debt}/cancel', [FinanceController::class, 'cancelDebt'])->name('debts.cancel');
+    Route::post('debts/{debt}/sms', [FinanceController::class, 'smsDebt'])->name('debts.sms');
 
     // Inventory
     Route::get('products', [CatalogController::class, 'products'])->name('products.index');
@@ -120,6 +121,9 @@ Route::middleware('auth')->group(function () {
         Route::put('expense-categories/{expenseCategory}', [AdminController::class, 'updateExpenseCategory'])->name('expense-categories.update');
         Route::get('settings', [AdminController::class, 'settings'])->name('settings.edit');
         Route::put('settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+        Route::post('settings/test-email', [AdminController::class, 'testEmail'])->name('settings.test-email');
+        Route::post('settings/test-sms', [AdminController::class, 'testSms'])->name('settings.test-sms');
+        Route::get('sms', [AdminController::class, 'smsLog'])->name('sms.index');
         Route::get('devices', [AdminController::class, 'devices'])->name('devices.index');
         Route::get('backups', [AdminController::class, 'backups'])->name('backups.index');
         Route::post('backups', [AdminController::class, 'runBackup'])->name('backups.store');

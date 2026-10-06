@@ -12,6 +12,7 @@ use App\Models\StockBalance;
 use App\Models\SyncReceipt;
 use App\Models\SystemNotification;
 use App\Services\ProfitService;
+use App\Support\Settings;
 use Illuminate\Http\Request;
 
 class DashboardController extends WebController
@@ -67,6 +68,7 @@ class DashboardController extends WebController
             'shops' => $shops,
             'lowStock' => $lowStock,
             'chart' => $chart,
+            'allocation' => $user->isSuperAdmin() ? ['overview' => $profit->allocationOverview(), 'percents' => Settings::allocationPercents(), 'labels' => [Settings::get('allocation_primary_label'), Settings::get('allocation_secondary_label')]] : null,
             'notifications' => SystemNotification::visibleTo($user)->whereNull('resolved_at')->latest()->limit(6)->get(),
             'conflicts' => $user->isSuperAdmin() ? SyncReceipt::where('status', 'conflict')->count() : 0,
             'recentSales' => $scope(Sale::with('shop:id,name', 'customer:id,name'))->latest('id')->limit(8)->get(),

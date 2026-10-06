@@ -189,6 +189,14 @@ class DailySessionService
                 'closing_notes' => $data['closing_notes'] ?? null,
                 'exceptions' => $data['exceptions'] ?? null,
             ]);
+            // Owner SMS summary after the closing is safely saved; an SMS failure never blocks closing.
+            DB::afterCommit(function () use ($session) {
+                try {
+                    app(SmsService::class)->sendDailySummary($session->fresh());
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            });
             NotificationService::resolve('closing_reminder:'.$session->id);
             NotificationService::resolve('closing_overdue:'.$session->id);
             AuditLogger::log('daily_session.closed', $session, null, $session->toArray());

@@ -35,6 +35,7 @@
             ['sync.index', 'Sync monitor', $isAdmin, 'refresh'],
             ['devices.index', 'Devices', $isAdmin, 'phone'],
             ['backups.index', 'Backups', $isAdmin, 'download'],
+            ['sms.index', 'SMS', $isAdmin, 'phone'],
             ['settings.edit', 'Settings', $isAdmin, 'settings'],
         ],
     ];

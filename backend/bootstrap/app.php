@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureActiveUser;
+use App\Http\Middleware\RequirePasswordChange;
 use App\Http\Middleware\RequireSuperAdmin;
 use App\Http\Middleware\SetActionContext;
 use App\Http\Middleware\SetLocale;
@@ -18,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [SetLocale::class, SetActionContext::class.':web', EnsureActiveUser::class]);
+        $middleware->web(append: [SetLocale::class, SetActionContext::class.':web', EnsureActiveUser::class, RequirePasswordChange::class]);
         $middleware->api(prepend: [SetLocale::class, SetActionContext::class.':api']);
         $middleware->alias([
             'active' => EnsureActiveUser::class,

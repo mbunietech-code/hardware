@@ -64,6 +64,28 @@
         <x-stat :label="__('Customers owe us')" :value="Money::format($stats['receivable'])" icon="wallet" tone="violet" :sub="__('We owe suppliers').' '.Money::format($stats['payable'])" />
     </div>
 
+    @if ($allocation)
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title"><x-icon name="pie" class="h-5 w-5 text-brand-600" />{{ __('Profit split') }}
+                    <span class="text-xs font-normal text-slate-500">{{ $allocation['percents'][0] }}% {{ __($allocation['labels'][0]) }} · {{ $allocation['percents'][1] }}% {{ __($allocation['labels'][1]) }}</span></div>
+                <a href="{{ route('allocations.index') }}" class="btn btn-sm btn-ghost">{{ __('All →') }}</a>
+            </div>
+            <div class="grid divide-y divide-slate-100 md:grid-cols-3 md:divide-x md:divide-y-0">
+                @foreach ($allocation['overview'] as $o)
+                    <div class="p-5">
+                        <div class="text-xs font-semibold tracking-wider text-slate-500 uppercase">{{ ['daily' => __('Today'), 'weekly' => __('This week'), 'monthly' => __('This month')][$o['type']] }}</div>
+                        <div class="mt-1 text-lg font-bold tabular-nums {{ $o['profit'] < 0 ? 'text-rose-600' : '' }}">{{ Money::format($o['profit']) }}</div>
+                        <div class="mt-2 space-y-1 text-sm">
+                            <div class="flex justify-between"><span class="text-slate-500">{{ __($allocation['labels'][0]) }}</span><span class="font-semibold tabular-nums text-brand-700">{{ Money::format($o['primary']) }}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">{{ __($allocation['labels'][1]) }}</span><span class="font-semibold tabular-nums">{{ Money::format($o['secondary']) }}</span></div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     <div class="grid gap-6 xl:grid-cols-3">
         {{-- Chart --}}
         <div class="card xl:col-span-2">

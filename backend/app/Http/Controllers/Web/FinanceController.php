@@ -8,9 +8,11 @@ use App\Models\Debt;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\Supplier;
+use App\Services\AuditLogger;
 use App\Services\CapitalService;
 use App\Services\DebtService;
 use App\Services\ExpenseService;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 
 class FinanceController extends WebController
@@ -128,5 +130,17 @@ class FinanceController extends WebController
         $this->debtService->cancel($debt, $this->reason($request), $request->user());
 
         return back()->with('success', __('Debt cancelled.'));
+    }
+
+    public function smsDebt(Request $request, Debt $debt, SmsService $sms)
+    {
+        $this->authorizeShopRecord($request, $debt->shop_id);
+        abort_unless($debt->type === 'receivable', 422);
+        $log = $sms->sendDebtReminder($debt, $request->user());
+        AuditLogger::log('debt.sms_reminder', $debt, null, ['status' => $log->status, 'to' => $log->to]);
+
+        return $log->status === 'sent'
+            ? back()->with('success', __('Reminder SMS sent to :phone.', ['phone' => $log->to]))
+            : back()->withErrors(['sms' => __('SMS not sent: :error', ['error' => $log->error])]);
     }
 }

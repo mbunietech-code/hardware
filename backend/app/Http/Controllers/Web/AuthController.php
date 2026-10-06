@@ -60,7 +60,10 @@ class AuthController extends WebController
             'current_password' => 'required|current_password',
             'password' => 'required|string|min:8|confirmed',
         ]);
-        $request->user()->update(['password' => $data['password']]);
+        if (Hash::check($data['password'], $request->user()->password)) {
+            return back()->withErrors(['password' => __('Choose a password different from the current one.')]);
+        }
+        $request->user()->update(['password' => $data['password'], 'must_change_password' => false]);
         AuditLogger::log('auth.password_changed', $request->user(), null, []);
 
         return back()->with('success', __('Password changed.'));
@@ -94,7 +97,7 @@ class AuthController extends WebController
             'password' => 'required|string|min:8|confirmed',
         ]);
         $status = Password::reset($data, function (User $user, string $password) {
-            $user->forceFill(['password' => $password])->setRememberToken(Str::random(60));
+            $user->forceFill(['password' => $password, 'must_change_password' => false])->setRememberToken(Str::random(60));
             $user->save();
             $user->tokens()->delete();
             AuditLogger::log('auth.password_reset', $user, null, [], $user->shop_id, $user->id);

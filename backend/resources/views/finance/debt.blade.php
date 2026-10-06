@@ -34,6 +34,14 @@
                     <x-field name="notes" :label="__('Notes')" />
                     <button class="btn btn-primary w-full">{{ __('Save payment') }}</button>
                 </form>
+                @if ($debt->type === 'receivable' && $debt->party_phone)
+                    <form method="POST" action="{{ route('debts.sms', $debt) }}" class="card card-body space-y-3">
+                        @csrf
+                        <h2 class="font-semibold">{{ __('SMS reminder') }}</h2>
+                        <p class="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">{{ app(\App\Services\SmsService::class)->debtReminderText($debt) }}</p>
+                        <button class="btn w-full"><x-icon name="phone" class="h-4 w-4" />{{ __('Send to :phone', ['phone' => $debt->party_phone]) }}</button>
+                    </form>
+                @endif
                 @if (auth()->user()->isSuperAdmin())
                     <div class="card card-body"><h2 class="mb-2 font-semibold">{{ __('Cancel debt') }}</h2><x-void-form :action="route('debts.cancel', $debt)" :label="__('Cancel debt')" /></div>
                 @endif

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('bms:daily-checks', function () {
     $count = NotificationService::runScheduledChecks();
-    $this->info("Debt alerts: {$count['debts']}, closing alerts: {$count['closing']}");
+    $this->info("Debt alerts: {$count['debts']}, closing alerts: {$count['closing']}, SMS reminders: {$count['sms']}");
 })->purpose('Raise overdue debt and daily closing reminders');
 
 Artisan::command('bms:backup', function (BackupService $backups) {

@@ -7,12 +7,15 @@ use App\Models\Device;
 use App\Models\ExpenseCategory;
 use App\Models\Product;
 use App\Models\Shop;
+use App\Models\SmsMessage;
 use App\Models\StockBalance;
 use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\BackupService;
+use App\Services\SmsService;
 use App\Support\Settings;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class AdminController extends WebController
@@ -105,6 +108,8 @@ class AdminController extends WebController
         ]);
         if (empty($data['password'])) {
             unset($data['password']);
+        } else {
+            $data['must_change_password'] = true; // a password set by the admin is temporary
         }
         $data['permissions'] = collect(User::SHOP_PERMISSIONS)->keys()->mapWithKeys(fn ($p) => [$p => $request->boolean("permissions.$p")])->all();
         $data['is_active'] = $request->boolean('is_active');
@@ -141,7 +146,7 @@ class AdminController extends WebController
 
     public function settings()
     {
-        return view('admin.settings', ['values' => Settings::all(), 'groups' => collect(Settings::DEFINITIONS)->groupBy('group', true)]);
+        return view('admin.settings', ['values' => Settings::safe(), 'balance' => app(SmsService::class)->balance(), 'groups' => collect(Settings::DEFINITIONS)->groupBy('group', true)]);
     }
 
     public function updateSettings(Request $request)
@@ -153,12 +158,27 @@ class AdminController extends WebController
             'business_name' => 'required|string|max:255',
             'currency' => 'required|string|max:10',
         ]);
-        $before = Settings::all();
+        $request->validate([
+            'sms_sender_id' => 'nullable|string|max:11',
+            'mail_port' => 'nullable|integer|min:1|max:65535',
+            'mail_from_address' => 'nullable|email',
+            'sms_reminder_every_days' => 'nullable|integer|min:1|max:60',
+        ]);
+        $before = Settings::safe();
         foreach (Settings::DEFINITIONS as $key => $def) {
+            if ($def['type'] === 'secret') {
+                if ($request->boolean("clear_$key")) {
+                    Settings::set($key, '');
+                } elseif ($request->filled($key)) {
+                    Settings::set($key, $request->input($key)); // blank = keep the saved secret
+                }
+
+                continue;
+            }
             Settings::set($key, $def['type'] === 'bool' ? $request->boolean($key) : $request->input($key, $def['default']));
         }
         Business::query()->update(['name' => Settings::get('business_name'), 'currency' => Settings::get('currency')]);
-        AuditLogger::log('settings.updated', null, $before, Settings::all());
+        AuditLogger::log('settings.updated', null, $before, Settings::safe());
 
         return back()->with('success', __('Settings saved.'));
     }
@@ -202,5 +222,41 @@ class AdminController extends WebController
         AuditLogger::log('backup.downloaded', null, null, ['file' => basename($path)]);
 
         return response()->download($path);
+    }
+
+    public function testEmail(Request $request)
+    {
+        $to = $request->validate(['test_email' => 'required|email'])['test_email'];
+        try {
+            Mail::raw(__('This is a test email from :app. Email is working.', ['app' => Settings::get('business_name')]),
+                fn ($m) => $m->to($to)->subject(__('Test email')));
+        } catch (\Throwable $e) {
+            return back()->withErrors(['test_email' => __('Email failed: :error', ['error' => $e->getMessage()])]);
+        }
+
+        return back()->with('success', config('mail.default') === 'log'
+            ? __('Email written to the log only. Fill in the SMTP settings to send real emails.')
+            : __('Test email sent to :to.', ['to' => $to]));
+    }
+
+    public function testSms(Request $request, SmsService $sms)
+    {
+        $phone = $request->validate(['test_phone' => 'required|string|max:20'])['test_phone'];
+        $log = $sms->send($phone, __('Test SMS from :app. SMS is working.', ['app' => Settings::get('business_name')]), 'test');
+
+        return $log->status === 'sent'
+            ? back()->with('success', __('Test SMS sent to :phone.', ['phone' => $log->to]))
+            : back()->withErrors(['test_phone' => __('SMS not sent: :error', ['error' => $log->error])]);
+    }
+
+    public function smsLog(Request $request)
+    {
+        return view('admin.sms', [
+            'messages' => SmsMessage::with('shop:id,name', 'user:id,name')
+                ->when($request->filled('status'), fn ($q) => $q->where('status', $request->status))
+                ->latest('id')->paginate(40)->withQueryString(),
+            'counts' => SmsMessage::selectRaw('status, COUNT(*) c')->groupBy('status')->pluck('c', 'status'),
+            'balance' => app(SmsService::class)->balance(),
+        ]);
     }
 }
