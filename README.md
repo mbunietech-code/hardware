@@ -95,10 +95,29 @@ Still open, not implemented: returns/refunds workflow (OD-007; voiding with reas
 - **Mobile**: `tr('English text')` from `mobile/lib/l10n/l10n.dart`, with translations in `mobile/lib/l10n/sw.dart`. The choice is saved in SQLite.
 - To add a new string: wrap it in `__('...')` (web) or `tr('...')` (mobile) and add the Swahili line to the matching file. A missing translation simply shows the English text.
 
+
+## 3c. Added later
+- **Product import** (Products → Import): upload Excel/CSV, download the template. Rows are matched by `code` (existing products are updated). The `stock` column sets the counted stock for a chosen shop.
+- **Report export**: every report downloads as **Excel (.xlsx)**, **PDF** or CSV.
+- **Customer returns** (open a sale → "Rudisha bidhaa / Return items"): partial returns per item, back to stock or marked damaged, with the refund taken off the customer's credit first. Returns lower revenue and profit, and appear in "Hesabu ya leo" and in the **Returns** report. Shop Admins need the "Process returns" permission.
+- **Backups**: `php artisan bms:backup` runs every night at 23:30 (keeps 14). Download them from **Administration → Backups**. Restore with:
+  ```bash
+  zcat hardware_bms_YYYY-MM-DD_HHMMSS.sql.gz | mysql -u hardware -p hardware_bms
+  ```
+- **Forgot password** on the login page sends a reset link by email. Emails are only written to `storage/logs/laravel.log` until you set real SMTP in `backend/.env`, for example with Gmail and an app password:
+  ```
+  MAIL_MAILER=smtp
+  MAIL_HOST=smtp.gmail.com
+  MAIL_PORT=587
+  MAIL_USERNAME=you@gmail.com
+  MAIL_PASSWORD=your-16-char-app-password
+  MAIL_FROM_ADDRESS=you@gmail.com
+  ```
+
 ## 4. Running and testing
 
 ```bash
-# Backend tests (26 tests: business rules, sync, permissions, every web page)
+# Backend tests (37 tests: business rules, sync, permissions, every web page)
 cd backend && php artisan test
 # Same tests against MySQL:
 DB_CONNECTION=mysql DB_DATABASE=hardware_bms_test DB_USERNAME=hardware DB_PASSWORD=hardware_secret php artisan test

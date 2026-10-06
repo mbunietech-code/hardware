@@ -34,6 +34,7 @@
             ['expense-categories.index', 'Expense categories', $isAdmin, 'folder'],
             ['sync.index', 'Sync monitor', $isAdmin, 'refresh'],
             ['devices.index', 'Devices', $isAdmin, 'phone'],
+            ['backups.index', 'Backups', $isAdmin, 'download'],
             ['settings.edit', 'Settings', $isAdmin, 'settings'],
         ],
     ];

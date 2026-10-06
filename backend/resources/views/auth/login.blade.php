@@ -45,6 +45,9 @@
 
             <form method="POST" action="{{ url('login') }}" class="mt-8 space-y-5">
                 @csrf
+                @if (session('success'))
+                    <div class="flash border-emerald-200 bg-emerald-50 text-emerald-800"><x-icon name="check" class="mt-0.5 h-5 w-5 shrink-0" />{{ session('success') }}</div>
+                @endif
                 @error('login')
                     <div class="flash border-rose-200 bg-rose-50 text-rose-800"><x-icon name="alert" class="mt-0.5 h-5 w-5 shrink-0" />{{ $message }}</div>
                 @enderror
@@ -63,7 +66,10 @@
                         <button type="button" @click="show = !show" class="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1.5 text-slate-400 hover:text-slate-700" :aria-label="show ? '' : ''"><x-icon name="eye" class="h-[18px] w-[18px]" /></button>
                     </div>
                 </div>
-                <label class="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" name="remember" value="1" class="h-4 w-4 rounded accent-brand-600"> {{ __('Keep me signed in') }}</label>
+                <div class="flex items-center justify-between gap-3">
+                    <label class="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" name="remember" value="1" class="h-4 w-4 rounded accent-brand-600"> {{ __('Keep me signed in') }}</label>
+                    <a href="{{ route('password.request') }}" class="text-sm font-semibold text-brand-700 hover:underline">{{ __('Forgot password?') }}</a>
+                </div>
                 <button class="btn btn-primary w-full py-3.5 text-base">{{ __('Sign in') }} <x-icon name="right" class="h-4 w-4" /></button>
             </form>
         </div>

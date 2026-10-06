@@ -7,6 +7,8 @@ use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends WebController
@@ -62,5 +64,44 @@ class AuthController extends WebController
         AuditLogger::log('auth.password_changed', $request->user(), null, []);
 
         return back()->with('success', __('Password changed.'));
+    }
+
+    public function forgotForm()
+    {
+        return view('auth.forgot');
+    }
+
+    public function sendResetLink(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+        $status = Password::sendResetLink($request->only('email'));
+        AuditLogger::log('auth.password_reset_requested', null, null, ['email' => $request->email, 'status' => $status]);
+
+        // Same answer whether or not the email exists, so accounts cannot be discovered.
+        return back()->with('success', __('If that email belongs to an account, a reset link has been sent. Check your inbox.'));
+    }
+
+    public function resetForm(Request $request, string $token)
+    {
+        return view('auth.reset', ['token' => $token, 'email' => $request->query('email')]);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $data = $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+        $status = Password::reset($data, function (User $user, string $password) {
+            $user->forceFill(['password' => $password])->setRememberToken(Str::random(60));
+            $user->save();
+            $user->tokens()->delete();
+            AuditLogger::log('auth.password_reset', $user, null, [], $user->shop_id, $user->id);
+        });
+
+        return $status === Password::PASSWORD_RESET
+            ? redirect()->route('login')->with('success', __('Your password has been changed. You can sign in now.'))
+            : back()->withInput(['email' => $data['email']])->withErrors(['email' => __('This reset link is invalid or has expired. Request a new one.')]);
     }
 }

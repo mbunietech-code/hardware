@@ -24,6 +24,10 @@ Route::get('locale/{locale}', function (string $locale) {
 Route::middleware('guest')->group(function () {
     Route::get('login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
+    Route::get('forgot-password', [AuthController::class, 'forgotForm'])->name('password.request');
+    Route::post('forgot-password', [AuthController::class, 'sendResetLink'])->middleware('throttle:login')->name('password.email');
+    Route::get('reset-password/{token}', [AuthController::class, 'resetForm'])->name('password.reset');
+    Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('password.update');
 });
 
 Route::middleware('auth')->group(function () {
@@ -117,6 +121,9 @@ Route::middleware('auth')->group(function () {
         Route::get('settings', [AdminController::class, 'settings'])->name('settings.edit');
         Route::put('settings', [AdminController::class, 'updateSettings'])->name('settings.update');
         Route::get('devices', [AdminController::class, 'devices'])->name('devices.index');
+        Route::get('backups', [AdminController::class, 'backups'])->name('backups.index');
+        Route::post('backups', [AdminController::class, 'runBackup'])->name('backups.store');
+        Route::get('backups/{name}', [AdminController::class, 'downloadBackup'])->where('name', '[A-Za-z0-9_\-.]+\.sql\.gz')->name('backups.download');
         Route::post('devices/{device}/toggle', [AdminController::class, 'toggleDevice'])->name('devices.toggle');
         Route::get('sync', [SystemController::class, 'sync'])->name('sync.index');
         Route::get('sync/{receipt}', [SystemController::class, 'syncShow'])->name('sync.show');

@@ -10,6 +10,7 @@ use App\Models\Shop;
 use App\Models\StockBalance;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\BackupService;
 use App\Support\Settings;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -176,5 +177,30 @@ class AdminController extends WebController
         AuditLogger::log($device->is_revoked ? 'device.revoked' : 'device.restored', $device->user, null, ['device_id' => $device->device_id]);
 
         return back()->with('success', $device->is_revoked ? 'Device revoked.' : 'Device restored.');
+    }
+
+    public function backups(BackupService $backups)
+    {
+        return view('admin.backups', ['backups' => $backups->list()]);
+    }
+
+    public function runBackup(BackupService $backups)
+    {
+        try {
+            $file = $backups->run();
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['backup' => $e->getMessage()]);
+        }
+
+        return back()->with('success', __('Backup created: :file', ['file' => basename($file)]));
+    }
+
+    public function downloadBackup(string $name, BackupService $backups)
+    {
+        $path = $backups->directory().'/'.basename($name);
+        abort_unless(is_file($path), 404);
+        AuditLogger::log('backup.downloaded', null, null, ['file' => basename($path)]);
+
+        return response()->download($path);
     }
 }
