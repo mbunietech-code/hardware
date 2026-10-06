@@ -50,7 +50,8 @@ class ReturnService
     {
         $data = Validator::make($data, [
             'items' => 'required|array',
-            'items.*.sale_item_id' => 'required|integer',
+            'items.*.sale_item_id' => 'nullable|integer|required_without:items.*.product_id',
+            'items.*.product_id' => 'nullable|integer',
             'items.*.quantity' => 'nullable|numeric|min:0',
             'items.*.restock' => 'nullable|boolean',
             'refund_method' => 'nullable|in:'.implode(',', array_diff(self::PAYMENT_METHODS, ['credit'])),
@@ -79,7 +80,10 @@ class ReturnService
                 if ($qty <= 0) {
                     continue;
                 }
-                $item = $sale->items->firstWhere('id', (int) $row['sale_item_id'])
+                // The mobile app only knows product ids; the web form sends sale item ids.
+                $item = (! empty($row['sale_item_id'])
+                    ? $sale->items->firstWhere('id', (int) $row['sale_item_id'])
+                    : $sale->items->first(fn ($i) => $i->product_id === (int) ($row['product_id'] ?? 0) && ($available[$i->id] ?? 0) > 0))
                     ?? throw ValidationException::withMessages(["items.$i.sale_item_id" => __('This item is not part of the sale.')]);
                 if ($qty > ($available[$item->id] ?? 0) + 0.0005) {
                     throw ValidationException::withMessages(["items.$i.quantity" => __('Only :n of :product can still be returned.', ['n' => Money::formatQty($available[$item->id] ?? 0), 'product' => $item->product->name])]);

@@ -7,6 +7,7 @@ import '../state/app_state.dart';
 import '../widgets/common.dart';
 import '../l10n/l10n.dart';
 import '../theme.dart';
+import 'sale_detail_screen.dart';
 
 enum CartMode { sale, purchase }
 
@@ -444,10 +445,18 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
         );
         await s.recorded();
         if (!mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        final nav = Navigator.of(context, rootNavigator: true);
         Navigator.pop(context, true);
         final debt = r.balance > 0 ? ' (${tr('debt {amount}', {'amount': money(context, r.balance)})})' : '';
         final warnings = r.warnings.isEmpty ? '' : ' · ${r.warnings.join(' ')}';
-        showMessage(context, tr('Sale saved: {amount}', {'amount': money(context, r.total)}) + debt + warnings);
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+            content: Text(tr('Sale saved: {amount}', {'amount': money(context, r.total)}) + debt + warnings),
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(label: tr('Receipt'), onPressed: () => nav.push(MaterialPageRoute(builder: (_) => SaleDetailScreen(uuid: r.uuid)))),
+          ));
       } else {
         await s.store.recordPurchase(
           shopId: s.shopId!,

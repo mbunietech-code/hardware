@@ -127,4 +127,38 @@ void main() {
     ]});
     expect((await store.debts(shopId: 1)).single.balance, 3000);
   });
+
+  test('return from a sale: value after discounts, restock only OK items, no over-return', () async {
+    await store.openDay(1);
+    final r = await store.recordSale(shopId: 1, lines: [CartLine(cement(), quantity: 4, price: 20000)], paymentMethod: 'cash', discount: 8000);
+    final sale = (await store.queueItem(r.uuid))!;
+    // 80,000 − 8,000 sale discount → 18,000 per bag actually paid
+    expect(LocalStore.unitValues(decode(sale.payload))[cement().id], 18000);
+
+    final ret = await store.recordReturn(sale: sale, quantities: {cement().id: 1}, damaged: {}, reason: 'Wrong item');
+    expect(ret.value, 18000);
+    expect(await store.available(1, cement().id), 7); // 10 − 4 + 1 back on the shelf
+
+    await store.recordReturn(sale: sale, quantities: {cement().id: 2}, damaged: {cement().id}, reason: 'Broken');
+    expect(await store.available(1, cement().id), 7, reason: 'damaged goods are not restocked');
+    expect((await store.returnedQty(sale.localUuid))[cement().id], 3);
+
+    expect(() => store.recordReturn(sale: sale, quantities: {cement().id: 2}, damaged: {}, reason: 'x'), throwsA(isA<LocalValidationException>()));
+
+    final t = await store.dayTotals(1, today());
+    expect(t['refunds'], 18000 + 36000);
+    final payload = decode((await store.pushable()).last.payload);
+    expect(payload['sale_local_uuid'], sale.localUuid);
+    expect(payload['items'][0]['restock'], false);
+  });
+
+  test('sales history lists sales of the day newest first', () async {
+    await store.openDay(1);
+    await store.recordSale(shopId: 1, lines: [CartLine(cement())], paymentMethod: 'cash');
+    await store.recordSale(shopId: 1, lines: [CartLine(cement(), quantity: 2)], paymentMethod: 'cash');
+    final list = await store.salesHistory(shopId: 1, date: today());
+    expect(list, hasLength(2));
+    expect(list.first.amount, 38000);
+    expect(await store.salesHistory(shopId: 1, date: '2000-01-01'), isEmpty);
+  });
 }

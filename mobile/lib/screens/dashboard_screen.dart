@@ -9,7 +9,10 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'cart_screen.dart';
+import 'customers_screen.dart';
 import 'expense_screen.dart';
+import 'reports_screen.dart';
+import 'sales_history_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key, required this.onNavigate});
@@ -30,6 +33,7 @@ class DashboardScreen extends StatelessWidget {
             s.store.products(shopId: shopId, lowOnly: true),
             s.store.notifications(),
             s.store.activity(shopId: shopId, date: today()),
+            s.store.serverSummary(),
           ]),
           builder: (context, snap) {
             if (!snap.hasData) return const Center(child: CircularProgressIndicator());
@@ -37,6 +41,7 @@ class DashboardScreen extends StatelessWidget {
             final low = snap.data![1] as List<Product>;
             final notes = snap.data![2] as List<Map<String, Object?>>;
             final activity = snap.data![3] as List<QueueItem>;
+            final summary = snap.data![4] as Map<String, dynamic>?;
             return ListView(
               padding: EdgeInsets.zero,
               children: [
@@ -47,6 +52,7 @@ class DashboardScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _DayCard(session: s.todaySession),
+                      if (summary != null) ...[const SizedBox(height: 14), _ProfitCard(summary: summary)],
                       const SizedBox(height: 14),
                       Row(
                         children: [
@@ -79,6 +85,15 @@ class DashboardScreen extends StatelessWidget {
                           _QuickAction(icon: Icons.receipt_long_rounded, color: Colors.orange, label: tr('Expense'), onTap: () => _push(context, const ExpenseScreen())),
                           _QuickAction(icon: Icons.payments_rounded, color: Colors.purple, label: tr('Debts'), onTap: () => onNavigate(3)),
                           _QuickAction(icon: Icons.inventory_rounded, color: Colors.teal, label: tr('Stock'), onTap: () => onNavigate(2)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _QuickAction(icon: Icons.history_rounded, color: Colors.indigo, label: tr('History'), onTap: () => _push(context, const SalesHistoryScreen())),
+                          _QuickAction(icon: Icons.bar_chart_rounded, color: Colors.green, label: tr('Reports'), onTap: () => _push(context, const ReportsScreen())),
+                          _QuickAction(icon: Icons.people_alt_rounded, color: Colors.pink, label: tr('Customers'), onTap: () => _push(context, const CustomersScreen())),
+                          _QuickAction(icon: Icons.event_available_rounded, color: Colors.blueGrey, label: tr('Day'), onTap: () => Navigator.pushNamed(context, '/day')),
                         ],
                       ),
                       if (notes.isNotEmpty) ...[
@@ -381,5 +396,76 @@ class _QuickAction extends StatelessWidget {
         ),
       ),
     ),
+  );
+}
+
+/// Profit and 60/40 split from the server (as at the last sync).
+class _ProfitCard extends StatelessWidget {
+  const _ProfitCard({required this.summary});
+  final Map<String, dynamic> summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final periods = Map<String, dynamic>.from(summary['periods'] as Map);
+    final labels = (summary['labels'] as List).cast<String>();
+    final percents = (summary['percents'] as List).map((e) => (e as num).toInt()).toList();
+    final todayP = Map<String, dynamic>.from(periods['daily'] as Map);
+    final profit = toDouble(todayP['profit']);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              IconBubble(icon: Icons.trending_up_rounded, color: profit < 0 ? Colors.red : Colors.green, size: 40),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(tr("Today's profit"), style: const TextStyle(color: Brand.muted, fontWeight: FontWeight.w600, fontSize: 13)),
+                  Text(money(context, profit), style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: profit < 0 ? Colors.red : Brand.ink)),
+                ]),
+              ),
+            ]),
+            const SizedBox(height: 12),
+            Row(children: [
+              Expanded(child: _SplitBox(label: '${labels[0]} ${percents[0]}%', value: money(context, toDouble(todayP['primary']), symbol: false), color: Brand.teal50, fg: Brand.teal800)),
+              const SizedBox(width: 10),
+              Expanded(child: _SplitBox(label: '${labels[1]} ${percents[1]}%', value: money(context, toDouble(todayP['secondary']), symbol: false), color: const Color(0xFFF1F5F9), fg: Brand.ink)),
+            ]),
+            const Divider(height: 24),
+            for (final (key, label) in [('weekly', tr('This week')), ('monthly', tr('This month'))])
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(children: [
+                  Expanded(child: Text(label, style: const TextStyle(color: Brand.muted))),
+                  Text(money(context, toDouble((periods[key] as Map)['profit']), symbol: false), style: const TextStyle(fontWeight: FontWeight.w700)),
+                ]),
+              ),
+            const SizedBox(height: 4),
+            Text(tr('Calculated by the server at the last sync.'), style: const TextStyle(color: Brand.muted, fontSize: 11)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SplitBox extends StatelessWidget {
+  const _SplitBox({required this.label, required this.value, required this.color, required this.fg});
+  final String label;
+  final String value;
+  final Color color;
+  final Color fg;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(14)),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label.toUpperCase(), maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: fg, fontSize: 10.5, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 4),
+      FittedBox(child: Text(value, style: TextStyle(color: fg, fontWeight: FontWeight.w800, fontSize: 16))),
+    ]),
   );
 }

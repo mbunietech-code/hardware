@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import 'data/db.dart';
+import 'screens/change_password_screen.dart';
 import 'screens/day_screen.dart';
 import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
@@ -44,6 +45,7 @@ class _Root extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = context.watch<AppState>();
     if (!s.loggedIn || s.sessionExpired) return const LoginScreen();
+    if (s.mustChangePassword) return const ChangePasswordScreen(forced: true);
     if (s.shopId == null) return const ShopPicker();
     return const HomeShell();
   }

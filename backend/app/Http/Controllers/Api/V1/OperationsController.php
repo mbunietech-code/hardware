@@ -117,6 +117,10 @@ class OperationsController extends ApiController
         if ($request->query('format') === 'csv') {
             return $this->reports->csv($report);
         }
+        // Labels in the caller's language (Accept-Language), like the web pages.
+        $report['title'] = __($report['title']);
+        $report['columns'] = array_map('__', $report['columns']);
+        $report['summary'] = collect($report['summary'] ?? [])->mapWithKeys(fn ($v, $k) => [__($k) => $v])->all();
 
         return response()->json($report);
     }

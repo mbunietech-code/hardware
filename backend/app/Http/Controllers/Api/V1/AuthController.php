@@ -82,6 +82,18 @@ class AuthController extends ApiController
         return response()->json(['message' => __('Logged out.')]);
     }
 
+    public function changePassword(Request $request)
+    {
+        $data = $request->validate([
+            'current_password' => 'required|current_password:sanctum',
+            'password' => 'required|string|min:8|confirmed|different:current_password',
+        ]);
+        $request->user()->update(['password' => $data['password'], 'must_change_password' => false]);
+        AuditLogger::log('auth.password_changed', $request->user(), null, ['source' => 'api']);
+
+        return response()->json(['message' => __('Password changed.'), 'user' => $this->userPayload($request->user()->fresh())]);
+    }
+
     private function expiresAt(): ?string
     {
         $minutes = config('sanctum.expiration');

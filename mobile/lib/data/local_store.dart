@@ -75,6 +75,11 @@ class LocalStore {
     return toDouble(r.first['q']);
   }
 
+  Future<Map<int, String>> productNames() async {
+    final rows = await db.query('products', columns: ['id', 'name']);
+    return {for (final r in rows) r['id'] as int: r['name'] as String};
+  }
+
   Future<List<Map<String, Object?>>> categories() => db.query('categories', where: 'is_active = 1', orderBy: 'name');
 
   Future<List<Map<String, Object?>>> expenseCategories() => db.query('expense_categories', where: 'is_active = 1', orderBy: 'name');
@@ -234,6 +239,7 @@ class LocalStore {
       'expenses_total': 0,
       'cash_out': 0,
       'debt_payments': 0,
+      'refunds': 0,
     };
     for (final r in rows) {
       final amount = toDouble(r['total']);
@@ -250,6 +256,9 @@ class LocalStore {
           if (r['method'] == 'cash') t['cash_out'] = t['cash_out']! + amount;
         case 'debt_payment':
           t['debt_payments'] = t['debt_payments']! + amount;
+        case 'sale_return':
+          t['refunds'] = t['refunds']! + amount;
+          if (r['method'] == 'cash') t['cash_out'] = t['cash_out']! + amount;
       }
     }
     return t;
@@ -831,6 +840,9 @@ class LocalStore {
       if (data['settings'] is Map) {
         await txn.insert('kv', {'key': 'settings', 'value': jsonEncode(data['settings'])}, conflictAlgorithm: ConflictAlgorithm.replace);
       }
+      if (data['summary'] is Map) {
+        await txn.insert('kv', {'key': 'summary', 'value': jsonEncode(data['summary'])}, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
       if (data['server_time'] != null) {
         await txn.insert('kv', {'key': 'last_pull', 'value': data['server_time']}, conflictAlgorithm: ConflictAlgorithm.replace);
       }
@@ -842,6 +854,109 @@ class LocalStore {
   Future<List<Map<String, Object?>>> shops() => db.query('shops', where: 'is_active = 1', orderBy: 'name');
 
   /// Remove synced history older than [days] days to keep the local database small.
+  // ---------------------------------------------------------------- history, returns, summary
+
+  /// Sales recorded on this phone (kept for 45 days), newest first. [date] limits to one business day.
+  Future<List<QueueItem>> salesHistory({required int shopId, String? date, int limit = 300}) async {
+    final rows = await db.query('sync_queue',
+        where: "entity = 'sale' AND shop_id = ?${date == null ? '' : ' AND business_date = ?'}",
+        whereArgs: [shopId, ?date],
+        orderBy: 'seq DESC',
+        limit: limit);
+    return rows.map(QueueItem.fromRow).toList();
+  }
+
+  Future<QueueItem?> queueItem(String uuid) async {
+    final rows = await db.query('sync_queue', where: 'local_uuid = ?', whereArgs: [uuid], limit: 1);
+    return rows.isEmpty ? null : QueueItem.fromRow(rows.first);
+  }
+
+  /// Quantity already returned per product for a sale recorded on this phone.
+  Future<Map<int, double>> returnedQty(String saleUuid) async {
+    final rows = await db.query('sync_queue', where: "entity = 'sale_return' AND status != 'rejected' AND payload LIKE ?", whereArgs: ['%"sale_local_uuid":"$saleUuid"%']);
+    final out = <int, double>{};
+    for (final r in rows) {
+      final p = jsonDecode(r['payload'] as String) as Map<String, dynamic>;
+      for (final i in (p['items'] as List)) {
+        final id = i['product_id'] as int;
+        out[id] = (out[id] ?? 0) + toDouble(i['quantity']);
+      }
+    }
+    return out;
+  }
+
+  /// Net price the customer paid per unit of each product in a sale (line and sale discounts included).
+  static Map<int, double> unitValues(Map<String, dynamic> salePayload) {
+    final items = (salePayload['items'] as List).cast<Map<String, dynamic>>();
+    final subtotal = items.fold<double>(0, (s, i) => s + toDouble(i['quantity']) * toDouble(i['unit_price']) - toDouble(i['discount']));
+    final total = subtotal - toDouble(salePayload['discount']);
+    final factor = subtotal > 0 ? total / subtotal : 1.0;
+    return {
+      for (final i in items)
+        i['product_id'] as int: round2((toDouble(i['quantity']) * toDouble(i['unit_price']) - toDouble(i['discount'])) / toDouble(i['quantity']) * factor),
+    };
+  }
+
+  /// Customer brings goods back (offline-capable). Stock returns now for items marked OK.
+  Future<({String uuid, double value})> recordReturn({
+    required QueueItem sale,
+    required Map<int, double> quantities,
+    required Set<int> damaged,
+    required String reason,
+    String refundMethod = 'cash',
+  }) async {
+    final payload = jsonDecode(sale.payload) as Map<String, dynamic>;
+    final shopId = payload['shop_id'] as int;
+    await _requireOpenDay(shopId, today());
+    if (sale.status == 'rejected') throw LocalValidationException(tr('This sale was rejected by the server and cannot be returned.'));
+    if (reason.trim().isEmpty) throw LocalValidationException(tr('Enter a reason.'));
+    final sold = <int, double>{};
+    for (final i in (payload['items'] as List)) {
+      sold[i['product_id'] as int] = (sold[i['product_id'] as int] ?? 0) + toDouble(i['quantity']);
+    }
+    final already = await returnedQty(sale.localUuid);
+    final units = unitValues(payload);
+    final lines = quantities.entries.where((e) => e.value > 0).toList();
+    if (lines.isEmpty) throw LocalValidationException(tr('Enter the quantity to return for at least one item.'));
+    var value = 0.0;
+    for (final e in lines) {
+      final left = (sold[e.key] ?? 0) - (already[e.key] ?? 0);
+      if (e.value > left + 0.0005) throw LocalValidationException(tr('Only {n} can still be returned.', {'n': _q(left)}));
+      value += (units[e.key] ?? 0) * e.value;
+    }
+    value = round2(value);
+    final uuid = newUuid();
+    await db.transaction((txn) async {
+      await _enqueue(txn, 'sale_return', uuid, {
+        'sale_local_uuid': sale.localUuid,
+        if (sale.serverId != null) 'sale_id': sale.serverId,
+        'shop_id': shopId,
+        'reason': reason.trim(),
+        'refund_method': refundMethod,
+        'items': [for (final e in lines) {'product_id': e.key, 'quantity': e.value, 'restock': !damaged.contains(e.key)}],
+      }, shopId: shopId, businessDate: today(), summary: '${tr('Return')} · ${sale.reference ?? sale.summary}', amount: value, method: refundMethod);
+      for (final e in lines) {
+        if (!damaged.contains(e.key)) {
+          await txn.insert('stock_deltas', {'txn_uuid': uuid, 'shop_id': shopId, 'product_id': e.key, 'delta': e.value});
+        }
+      }
+    });
+    return (uuid: uuid, value: value);
+  }
+
+  /// Profit / 60-40 summary calculated by the server at the last sync.
+  Future<Map<String, dynamic>?> serverSummary() async {
+    final raw = await appDb.getKv('summary');
+    return raw == null ? null : Map<String, dynamic>.from(jsonDecode(raw) as Map);
+  }
+
+  /// Customers with what they still owe (matched by name on open receivable debts).
+  Future<List<Map<String, Object?>>> customersWithBalance({String search = ''}) => db.rawQuery('''
+      SELECT c.uid, c.server_id, c.name, c.phone,
+             COALESCE((SELECT SUM(d.balance) FROM debts d WHERE d.party_name = c.name AND d.type = 'receivable' AND d.status IN ('open','partial')), 0) AS owes
+      FROM customers c WHERE c.is_active = 1 ${search.isEmpty ? '' : 'AND (c.name LIKE ? OR c.phone LIKE ?)'}
+      ORDER BY owes DESC, c.name''', search.isEmpty ? [] : ['%$search%', '%$search%']);
+
   Future<void> purgeHistory({int days = 45}) async {
     final cutoff = DateTime.now().subtract(Duration(days: days)).toIso8601String();
     await db.delete('sync_queue', where: "status = 'synced' AND created_at < ?", whereArgs: [cutoff]);

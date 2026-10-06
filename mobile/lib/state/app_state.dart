@@ -74,6 +74,7 @@ class AppState extends ChangeNotifier {
   String get currency => (user?['currency'] as String?) ?? 'TZS';
   String get businessName => (user?['business_name'] as String?) ?? 'Hardware BMS';
   int? get shopId => (user?['shop_id'] as int?) ?? selectedShopId;
+  bool get mustChangePassword => user?['must_change_password'] == true;
   bool can(String permission) => isSuperAdmin || ((user?['permissions'] as Map?)?[permission] == true);
 
   Future<void> init() async {
@@ -163,6 +164,20 @@ class AppState extends ChangeNotifier {
       sessionExpired = true; // keep the user so their queue stays attributed
     }
     notifyListeners();
+  }
+
+  /// Change the password (online). Clears the "must change" flag set for default/temporary passwords.
+  Future<void> changePassword(String current, String newPassword) async {
+    final res = await api.post('auth/password', {'current_password': current, 'password': newPassword, 'password_confirmation': newPassword});
+    user = Map<String, dynamic>.from(res['user'] as Map);
+    await db.setKv('user', jsonEncode(user));
+    notifyListeners();
+  }
+
+  /// Create a product on the server (needs internet), then refresh the local catalogue.
+  Future<void> addProductOnline(Map<String, dynamic> data) async {
+    await api.post('products', data);
+    await syncNow();
   }
 
   /// Switch the UI language (en / sw). Saved on the phone; server messages follow via Accept-Language.

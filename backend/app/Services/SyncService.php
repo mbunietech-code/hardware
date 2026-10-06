@@ -223,6 +223,7 @@ class SyncService
             'debts' => $changed($inShops(Debt::query()))->get(['id', 'shop_id', 'type', 'customer_id', 'supplier_id', 'party_name', 'party_phone', 'original_amount', 'paid_amount', 'balance', 'debt_date', 'due_date', 'status', 'local_uuid', 'updated_at']),
             'daily_sessions' => $inShops(DailySession::query())->where('business_date', '>=', now()->subDays(7)->toDateString())
                 ->get(['id', 'shop_id', 'business_date', 'status', 'opening_cash', 'expected_cash', 'closing_cash', 'totals', 'local_uuid', 'updated_at']),
+            'summary' => $this->summaryFor($user),
             'notifications' => SystemNotification::visibleTo($user)->whereNull('read_at')->whereNull('resolved_at')
                 ->latest()->limit(50)->get()
                 ->map(fn (SystemNotification $n) => ['id' => $n->id, 'type' => $n->type, 'title' => $n->titleText(),
@@ -251,5 +252,23 @@ class SyncService
             'message' => $r->error_message,
             'resolution' => $r->resolution,
         ], fn ($v) => $v !== null);
+    }
+
+    /** Server-calculated profit and 60/40 split for today, this week and this month (user's shop). */
+    private function summaryFor(User $user): array
+    {
+        $profit = app(ProfitService::class);
+        $shopIds = $user->accessibleShopIds();
+        [$p1, $p2] = Settings::allocationPercents();
+
+        return [
+            'labels' => [__(Settings::get('allocation_primary_label')), __(Settings::get('allocation_secondary_label'))],
+            'percents' => [$p1, $p2],
+            'periods' => collect($profit->allocationOverview(null, $shopIds))->map(function ($o) use ($profit, $shopIds) {
+                $s = $profit->summary($o['from'], $o['to'], null, $shopIds);
+
+                return $o + ['revenue' => $s['revenue'], 'cost_of_goods' => $s['cost_of_goods'], 'expenses' => $s['expenses_reducing_profit']];
+            })->all(),
+        ];
     }
 }

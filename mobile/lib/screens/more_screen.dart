@@ -6,7 +6,12 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'cart_screen.dart';
+import 'add_product_screen.dart';
+import 'change_password_screen.dart';
+import 'customers_screen.dart';
 import 'expense_screen.dart';
+import 'reports_screen.dart';
+import 'sales_history_screen.dart';
 import '../l10n/l10n.dart';
 
 class MoreScreen extends StatelessWidget {
@@ -85,6 +90,28 @@ class MoreScreen extends StatelessWidget {
             trailing: const LanguageSwitch(),
           ),
           ListTile(
+            leading: const Icon(Icons.history_rounded),
+            title: Text(tr('Sales history')),
+            subtitle: Text(tr('Receipts and returns')),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SalesHistoryScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.bar_chart_rounded),
+            title: Text(tr('Reports')),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen())),
+          ),
+          ListTile(
+            leading: const Icon(Icons.people_alt_rounded),
+            title: Text(tr('Customers')),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen())),
+          ),
+          if (s.can('manage_products'))
+            ListTile(
+              leading: const Icon(Icons.add_box_rounded),
+              title: Text(tr('New product')),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
+            ),
+          ListTile(
             leading: const Icon(Icons.event_available),
             title: Text(tr('Open / close business day')),
             onTap: () => Navigator.pushNamed(context, '/day'),
@@ -132,6 +159,11 @@ class MoreScreen extends StatelessWidget {
               },
             ),
           const Divider(),
+          ListTile(
+            leading: const Icon(Icons.password_rounded),
+            title: Text(tr('Change password')),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangePasswordScreen())),
+          ),
           ListTile(leading: const Icon(Icons.dns), title: Text(tr('Server')), subtitle: Text(s.serverUrl)),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
