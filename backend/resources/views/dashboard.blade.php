@@ -35,6 +35,16 @@
                         <span>{{ __(':n sale(s)', ['n' => $stats['sales_count']]) }}</span>
                     @endif
                 </div>
+                @php $d = $stats['today']; @endphp
+                <div class="mt-4 border-t border-white/15 pt-4">
+                    <div class="text-xs font-semibold tracking-wider text-white/65 uppercase">{{ __("Today's profit") }}</div>
+                    <div class="mt-1 text-2xl font-bold tabular-nums {{ $d['profit'] < 0 ? 'text-rose-300' : 'text-emerald-300' }}">{{ Money::format($d['profit']) }}</div>
+                    @if ($d['formula'] === 'net')
+                        <div class="mt-1 text-xs text-white/70">
+                            {{ __('Gross profit') }} {{ Money::format($d['gross_profit']) }} − {{ __('Expenses') }} {{ Money::format($d['expenses_reducing_profit']) }}
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </div>

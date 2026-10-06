@@ -33,6 +33,7 @@ class DashboardController extends WebController
             'receivable' => (float) $scope(Debt::where('type', 'receivable')->whereIn('status', ['open', 'partial']))->sum('balance'),
             'payable' => (float) $scope(Debt::where('type', 'payable')->whereIn('status', ['open', 'partial']))->sum('balance'),
             'month' => $profit->summary($monthStart, $today, null, $shopIds),
+            'today' => $profit->summary($today, $today, null, $shopIds),
             'sales_yesterday' => (float) $scope(Sale::where('status', 'completed')->whereDate('sale_date', now()->subDay()->toDateString()))->sum('total'),
             'expenses_yesterday' => (float) $scope(Expense::where('status', 'active')->whereDate('expense_date', now()->subDay()->toDateString()))->sum('amount'),
         ];
