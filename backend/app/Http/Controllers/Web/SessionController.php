@@ -29,6 +29,10 @@ class SessionController extends WebController
     public function open(Request $request)
     {
         $session = $this->service->open($request->all(), $request->user());
+        $back = $request->input('redirect');
+        if ($back && str_starts_with($back, url('/'))) {
+            return redirect($back)->with('success', __('Business day opened.'));
+        }
 
         return redirect()->route('sessions.show', $session)->with('success', __('Business day opened.'));
     }

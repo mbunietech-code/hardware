@@ -101,4 +101,19 @@ class AccessTest extends TestCase
             ->assertForbidden();
         $this->getJson('/api/v1/reports/profit')->assertOk()->assertJsonStructure(['summary', 'rows', 'notice']);
     }
+
+    public function test_web_sale_without_open_day_shows_message_not_error_page(): void
+    {
+        $this->actingAs($this->shopAdmin);
+        $this->get('/sales/create')->assertOk()->assertSee('Open day');
+
+        $this->from('/sales/create')->post('/sales', [
+            'shop_id' => $this->main->id, 'payment_method' => 'cash',
+            'items' => [['product_id' => $this->p1, 'quantity' => 1, 'price' => 1000]],
+        ])->assertRedirect('/sales/create')->assertSessionHasErrors('business');
+
+        $this->post('/sessions', ['shop_id' => $this->main->id, 'opening_cash' => 0, 'redirect' => url('/sales/create')])
+            ->assertRedirect(url('/sales/create'));
+        $this->get('/sales/create')->assertOk()->assertDontSee('Today is not open yet for this shop.');
+    }
 }

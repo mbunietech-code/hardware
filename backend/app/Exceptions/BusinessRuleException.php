@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use RuntimeException;
 
 /**
@@ -21,10 +22,11 @@ class BusinessRuleException extends RuntimeException
         parent::__construct($message);
     }
 
-    public function render($request): ?JsonResponse
+    public function render($request): JsonResponse|RedirectResponse
     {
+        // Web forms: go back to the form and show the message instead of an error page.
         if (! $request->expectsJson() && ! $request->is('api/*')) {
-            return null;
+            return redirect()->back()->withInput()->withErrors(['business' => $this->getMessage()]);
         }
 
         return response()->json([

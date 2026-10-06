@@ -8,6 +8,24 @@
         ? ['cash' => ['Cash', 'cash'], 'mobile_money' => ['Mobile money', 'phone'], 'bank' => ['Bank', 'store'], 'card' => ['Card', 'wallet'], 'credit' => ['Credit', 'calendar']]
         : ['cash' => ['Cash', 'cash'], 'mobile_money' => ['Mobile money', 'phone'], 'bank' => ['Bank', 'store'], 'credit' => ['Credit', 'calendar']];
 @endphp
+@if (\App\Support\Settings::get('require_open_day') && ! $session?->isOpen())
+    <div class="flash mb-5 items-center border-amber-200 bg-amber-50 text-amber-900">
+        <x-icon name="lock" class="h-5 w-5 shrink-0" />
+        <div class="flex-1">
+            <div class="font-semibold">{{ $session ? __('Today is closed for this shop.') : __('Today is not open yet for this shop.') }}</div>
+            <div class="text-sm font-normal">{{ __('Open the business day before recording transactions.') }}</div>
+        </div>
+        @if (! $session)
+            <form method="POST" action="{{ route('sessions.open') }}" class="flex items-center gap-2">
+                @csrf
+                <input type="hidden" name="shop_id" value="{{ $shopId }}">
+                <input type="hidden" name="redirect" value="{{ url()->full() }}">
+                <input name="opening_cash" type="number" min="0" step="any" class="input w-36 bg-white" placeholder="{{ __('Opening cash') }}">
+                <button class="btn btn-primary"><x-icon name="unlock" class="h-4 w-4" />{{ __('Open day') }}</button>
+            </form>
+        @endif
+    </div>
+@endif
 <form method="POST" action="{{ $action }}" x-data="pos(@js($products), '{{ $priceKey }}', { discounts: @js($discounts), checkStock: @js($checkStock) })"
       @submit="if (!cart.length) { $event.preventDefault(); }" class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_420px]">
     @csrf

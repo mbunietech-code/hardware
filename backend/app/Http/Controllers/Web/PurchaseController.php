@@ -33,6 +33,7 @@ class PurchaseController extends WebController
         $stock = \App\Models\StockBalance::where('shop_id', $shopId)->pluck('quantity', 'product_id');
 
         return view('purchases.create', [
+            'session' => \App\Models\DailySession::where('shop_id', $shopId)->whereDate('business_date', now()->toDateString())->first(),
             'shops' => $shops,
             'shopId' => $shopId,
             'categories' => \App\Models\Category::where('is_active', true)->orderBy('name')->pluck('name', 'id'),

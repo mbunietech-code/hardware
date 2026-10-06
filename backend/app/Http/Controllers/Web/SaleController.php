@@ -34,6 +34,7 @@ class SaleController extends WebController
         $stock = StockBalance::where('shop_id', $shopId)->pluck('quantity', 'product_id');
 
         return view('sales.create', [
+            'session' => \App\Models\DailySession::where('shop_id', $shopId)->whereDate('business_date', now()->toDateString())->first(),
             'shops' => $shops,
             'shopId' => $shopId,
             'products' => Product::where('is_active', true)->orderBy('name')->get(['id', 'category_id', 'code', 'name', 'unit', 'selling_price', 'cost_price'])
