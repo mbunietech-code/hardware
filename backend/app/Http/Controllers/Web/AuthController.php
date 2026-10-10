@@ -1,0 +1,110 @@
+<?php
+
+namespace App\Http\Controllers\Web;
+
+use App\Models\User;
+use App\Services\AuditLogger;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+
+class AuthController extends WebController
+{
+    public function showLogin()
+    {
+        return view('auth.login');
+    }
+
+    public function login(Request $request)
+    {
+        $data = $request->validate(['login' => 'required|string', 'password' => 'required|string']);
+        $user = User::where('email', $data['login'])->orWhere('phone', $data['login'])->first();
+
+        if (! $user || ! Hash::check($data['password'], $user->password)) {
+            AuditLogger::log('auth.login_failed', null, null, ['login' => $data['login']], null, $user?->id);
+            throw ValidationException::withMessages(['login' => __('The login details are incorrect.')]);
+        }
+        if (! $user->is_active) {
+            throw ValidationException::withMessages(['login' => __('Your account is deactivated.')]);
+        }
+
+        Auth::login($user, $request->boolean('remember'));
+        $request->session()->regenerate();
+        $user->update(['last_login_at' => now()]);
+        AuditLogger::log('auth.login', $user, null, ['source' => 'web'], $user->shop_id, $user->id);
+
+        return redirect()->intended(route('dashboard'));
+    }
+
+    public function logout(Request $request)
+    {
+        AuditLogger::log('auth.logout', $request->user());
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
+    }
+
+    public function profile()
+    {
+        return view('auth.profile');
+    }
+
+    public function password(Request $request)
+    {
+        $data = $request->validate([
+            'current_password' => 'required|current_password',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+        if (Hash::check($data['password'], $request->user()->password)) {
+            return back()->withErrors(['password' => __('Choose a password different from the current one.')]);
+        }
+        $request->user()->update(['password' => $data['password'], 'must_change_password' => false]);
+        AuditLogger::log('auth.password_changed', $request->user(), null, []);
+
+        return back()->with('success', __('Password changed.'));
+    }
+
+    public function forgotForm()
+    {
+        return view('auth.forgot');
+    }
+
+    public function sendResetLink(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+        $status = Password::sendResetLink($request->only('email'));
+        AuditLogger::log('auth.password_reset_requested', null, null, ['email' => $request->email, 'status' => $status]);
+
+        // Same answer whether or not the email exists, so accounts cannot be discovered.
+        return back()->with('success', __('If that email belongs to an account, a reset link has been sent. Check your inbox.'));
+    }
+
+    public function resetForm(Request $request, string $token)
+    {
+        return view('auth.reset', ['token' => $token, 'email' => $request->query('email')]);
+    }
+
+    public function resetPassword(Request $request)
+    {
+        $data = $request->validate([
+            'token' => 'required',
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+        $status = Password::reset($data, function (User $user, string $password) {
+            $user->forceFill(['password' => $password, 'must_change_password' => false])->setRememberToken(Str::random(60));
+            $user->save();
+            $user->tokens()->delete();
+            AuditLogger::log('auth.password_reset', $user, null, [], $user->shop_id, $user->id);
+        });
+
+        return $status === Password::PASSWORD_RESET
+            ? redirect()->route('login')->with('success', __('Your password has been changed. You can sign in now.'))
+            : back()->withInput(['email' => $data['email']])->withErrors(['email' => __('This reset link is invalid or has expired. Request a new one.')]);
+    }
+}
